@@ -1,0 +1,19 @@
+# macOS system files
+.DS_Store
+
+# Python virtual environments
+venv/
+*/venv/
+
+# VSCode settings
+.vscode/
+
+# Maven target directories
+target/
+
+# Logs
+*.log
+
+# Temporary or build files
+*.class
+*.iml

@@ -1,0 +1,4 @@
+com/campuscoord/repository/EventRepository.class
+com/campuscoord/controller/EventController.class
+com/campuscoord/model/Event.class
+com/campuscoord/CampusCoordApplication.class
