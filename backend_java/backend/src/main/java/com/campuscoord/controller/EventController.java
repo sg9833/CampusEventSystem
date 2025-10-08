@@ -1,41 +1,54 @@
 package com.campuscoord.controller;
 
+import com.campuscoord.dao.EventDao;
 import com.campuscoord.model.Event;
-import com.campuscoord.repository.EventRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/events")
+@RequestMapping("/api/events")
 public class EventController {
 
-    @Autowired
-    private EventRepository eventRepository;
+    private final EventDao eventDao;
 
-    // GET all events
+    public EventController(EventDao eventDao) {
+        this.eventDao = eventDao;
+    }
+
     @GetMapping
-    public List<Event> getAllEvents() {
-        return eventRepository.findAll();
+    public ResponseEntity<List<Event>> listEvents() {
+        return ResponseEntity.ok(eventDao.findAll());
     }
 
-    // POST a new event
+    // Accept minimal event data in request body and create
     @PostMapping
-    public Event createEvent(@RequestBody Event event) {
-        return eventRepository.save(event);
-    }
+    public ResponseEntity<?> createEvent(@RequestBody Map<String, Object> body) {
+        try {
+            String title = (String) body.get("title");
+            String description = (String) body.get("description");
+            Integer organizerId = body.get("organizerId") == null ? null : ((Number) body.get("organizerId")).intValue();
+            String startStr = (String) body.get("startTime");
+            String endStr = (String) body.get("endTime");
+            String venue = (String) body.get("venue");
 
-    // GET event by ID
-    @GetMapping("/{id}")
-    public Event getEventById(@PathVariable Long id) {
-        return eventRepository.findById(id).orElse(null);
-    }
+            LocalDateTime start = startStr == null ? null : LocalDateTime.parse(startStr);
+            LocalDateTime end = endStr == null ? null : LocalDateTime.parse(endStr);
 
-    // DELETE event by ID
-    @DeleteMapping("/{id}")
-    public String deleteEvent(@PathVariable Long id) {
-        eventRepository.deleteById(id);
-        return "Event deleted with id: " + id;
+            Event event = new Event(0, title, description, organizerId, start, end, venue, LocalDateTime.now());
+            int id = eventDao.create(event);
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("id", id);
+            return ResponseEntity.ok(resp);
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid date format for startTime or endTime. Use ISO-8601."));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of("error", ex.getMessage()));
+        }
     }
 }

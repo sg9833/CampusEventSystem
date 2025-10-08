@@ -1,22 +1,40 @@
 -- schema.sql
-
-CREATE DATABASE IF NOT EXISTS campusdb;
-USE campusdb;
-
-CREATE TABLE IF NOT EXISTS event (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    location VARCHAR(255),
-    start_time DATETIME,
-    end_time DATETIME,
-    description TEXT
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL
 );
 
--- If you later want to create Participant table
-CREATE TABLE IF NOT EXISTS participant (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE events (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    organizer_id INT NOT NULL,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    venue VARCHAR(255),
+    FOREIGN KEY (organizer_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE resources (
+    id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    event_id BIGINT,
-    FOREIGN KEY (event_id) REFERENCES event(id)
+    type VARCHAR(100) NOT NULL,
+    capacity INT NOT NULL,
+    location VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE bookings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    event_id INT NOT NULL,
+    user_id INT NOT NULL,
+    resource_id INT NOT NULL,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
 );
