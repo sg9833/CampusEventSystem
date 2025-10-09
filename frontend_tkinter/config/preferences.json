@@ -1,0 +1,13 @@
+{
+  "window": {
+    "width": 1200,
+    "height": 700,
+    "x": 5,
+    "y": 39,
+    "maximized": false
+  },
+  "theme": "light",
+  "font_scale": 1.0,
+  "notifications_enabled": true,
+  "auto_refresh": true
+}

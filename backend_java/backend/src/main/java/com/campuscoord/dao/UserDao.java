@@ -72,6 +72,22 @@ public class UserDao {
         return key != null ? key.intValue() : -1;
     }
 
+    public int createUser(String name, String email, String passwordHash, String role) {
+        String sql = "INSERT INTO users (name, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, NOW())";
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbc.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, name);
+            ps.setString(2, email);
+            ps.setString(3, passwordHash);
+            ps.setString(4, role);
+            return ps;
+        }, keyHolder);
+
+        Number key = keyHolder.getKey();
+        return key != null ? key.intValue() : -1;
+    }
+
     private static LocalDateTime toLocalDateTime(Timestamp ts) {
         return ts == null ? null : ts.toLocalDateTime();
     }
