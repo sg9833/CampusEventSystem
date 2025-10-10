@@ -6,6 +6,7 @@ from datetime import datetime
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
 from utils.button_styles import ButtonStyles
+from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_danger_button, create_warning_button
 
 
 class OrganizerDashboard(tk.Frame):
@@ -56,21 +57,35 @@ class OrganizerDashboard(tk.Frame):
         menu.pack(fill='both', expand=True, pady=(12, 12))
 
         def add_btn(text, cmd, icon='•'):
-            btn = tk.Button(
-                menu,
-                text=f"{icon}  {text}",
-                font=('Helvetica', 11),
-                bg=colors.get('primary', '#2C3E50'),
-                fg='white',
-                activebackground=colors.get('secondary', '#3498DB'),
-                activeforeground='white',
-                relief='flat',
-                anchor='w',
-                command=cmd,
-                padx=16,
-                pady=8,
-            )
-            btn.pack(fill='x')
+            # Create canvas-based button for macOS compatibility
+            btn_frame = tk.Frame(menu, bg=colors.get('primary', '#2C3E50'))
+            btn_frame.pack(fill='x', pady=2)
+            
+            canvas = tk.Canvas(btn_frame, width=200, height=40, bg=colors.get('primary', '#2C3E50'), 
+                             highlightthickness=0, cursor='hand2')
+            canvas.pack(fill='x')
+            
+            # Button background (initially same as sidebar)
+            rect = canvas.create_rectangle(0, 0, 200, 40, fill=colors.get('primary', '#2C3E50'), 
+                                         outline='', tags='btn')
+            # Button text
+            text_label = f"{icon}  {text}"
+            text_id = canvas.create_text(16, 20, text=text_label, fill='#FFFFFF', 
+                                        font=('Helvetica', 11), anchor='w', tags='btn')
+            
+            # Hover effects
+            def on_enter(e):
+                canvas.itemconfig(rect, fill=colors.get('secondary', '#3498DB'))
+            
+            def on_leave(e):
+                canvas.itemconfig(rect, fill=colors.get('primary', '#2C3E50'))
+            
+            def on_click(e):
+                cmd()
+            
+            canvas.tag_bind('btn', '<Enter>', on_enter)
+            canvas.tag_bind('btn', '<Leave>', on_leave)
+            canvas.tag_bind('btn', '<Button-1>', on_click)
 
         add_btn('Dashboard', self._render_dashboard, icon='🏠')
         add_btn('Create Event', self._render_create_event, icon='➕')
@@ -105,10 +120,12 @@ class OrganizerDashboard(tk.Frame):
         self.search_var = tk.StringVar()
         search_entry = tk.Entry(search_frame, textvariable=self.search_var)
         search_entry.pack(side='left')
-        tk.Button(search_frame, text='Search', command=self._on_search, bg=colors.get('secondary', '#3498DB'), fg='white', relief='flat').pack(side='left', padx=(6, 0))
+        search_btn = create_primary_button(search_frame, 'Search', self._on_search, width=80, height=30)
+        search_btn.pack(side='left', padx=(6, 0))
 
         # Notifications icon
-        tk.Button(top, text='🔔', relief='flat', bg='white', command=lambda: messagebox.showinfo('Notifications', 'No new notifications')).pack(side='right', padx=(0, 8))
+        notif_btn = create_secondary_button(top, '🔔', lambda: messagebox.showinfo('Notifications', 'No new notifications'), width=40, height=30)
+        notif_btn.pack(side='right', padx=(0, 8))
 
         # Content container (scrollable)
         content_container = tk.Frame(main, bg=self.controller.colors.get('background', '#ECF0F1'))
@@ -244,9 +261,12 @@ class OrganizerDashboard(tk.Frame):
         btn_frame = tk.Frame(action_buttons, bg='white')
         btn_frame.pack(padx=12, pady=12)
         
-        tk.Button(btn_frame, text='➕ Create New Event', command=self._render_create_event, bg=colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 11, 'bold'), padx=16, pady=8).pack(side='left', padx=(0, 8))
-        tk.Button(btn_frame, text='👥 Check Registrations', command=self._render_event_registrations, bg=colors.get('success', '#27AE60'), fg='white', relief='flat', font=('Helvetica', 11, 'bold'), padx=16, pady=8).pack(side='left', padx=8)
-        tk.Button(btn_frame, text='📊 View Analytics', command=self._render_analytics, bg=colors.get('warning', '#F39C12'), fg='white', relief='flat', font=('Helvetica', 11, 'bold'), padx=16, pady=8).pack(side='left', padx=(8, 0))
+        create_btn = create_primary_button(btn_frame, '➕ Create New Event', self._render_create_event, width=180, height=40)
+        create_btn.pack(side='left', padx=(0, 8))
+        reg_btn = create_success_button(btn_frame, '👥 Check Registrations', self._render_event_registrations, width=200, height=40)
+        reg_btn.pack(side='left', padx=8)
+        analytics_btn = create_warning_button(btn_frame, '📊 View Analytics', self._render_analytics, width=160, height=40)
+        analytics_btn.pack(side='left', padx=(8, 0))
 
         # Calendar view of scheduled events
         calendar = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
@@ -378,8 +398,10 @@ class OrganizerDashboard(tk.Frame):
         btn_frame = tk.Frame(form, bg='white')
         btn_frame.grid(row=12, column=0, sticky='ew', pady=(12, 0))
         
-        tk.Button(btn_frame, text='Create Event', command=submit_event, bg=colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 11, 'bold'), padx=20, pady=10).pack(side='left')
-        tk.Button(btn_frame, text='Cancel', command=self._render_dashboard, bg='#6B7280', fg='white', relief='flat', font=('Helvetica', 11), padx=20, pady=10).pack(side='left', padx=(8, 0))
+        create_event_btn = create_primary_button(btn_frame, 'Create Event', submit_event, width=140, height=44)
+        create_event_btn.pack(side='left')
+        cancel_btn = create_secondary_button(btn_frame, 'Cancel', self._render_dashboard, width=100, height=44)
+        cancel_btn.pack(side='left', padx=(8, 0))
 
     def _render_my_events(self):
         self._clear_content()
@@ -389,7 +411,8 @@ class OrganizerDashboard(tk.Frame):
             no_events = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
             no_events.pack(fill='both', expand=True, padx=16, pady=(0, 16))
             tk.Label(no_events, text='No events created yet', bg='white', fg='#6B7280').pack(padx=12, pady=40)
-            tk.Button(no_events, text='Create Your First Event', command=self._render_create_event, bg=self.controller.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 11, 'bold'), padx=16, pady=8).pack(pady=(0, 40))
+            first_event_btn = create_primary_button(no_events, 'Create Your First Event', self._render_create_event, width=200, height=40)
+            first_event_btn.pack(pady=(0, 40))
         else:
             self._render_events_table(self.my_events, show_actions=True)
 
@@ -545,7 +568,8 @@ class OrganizerDashboard(tk.Frame):
                 if show_actions:
                     event_id = e.get('id')
                     reg_count = len(self.event_registrations.get(event_id, []))
-                    tk.Button(row, text=f'View ({reg_count})', command=lambda eid=event_id: self._show_event_details(eid), bg=self.controller.colors.get('secondary', '#3498DB'), fg='white', relief='flat').grid(row=0, column=4, padx=8)
+                    view_btn = create_primary_button(row, f'View ({reg_count})', lambda eid=event_id: self._show_event_details(eid), width=90, height=30)
+                    view_btn.grid(row=0, column=4, padx=8)
 
     def _show_event_details(self, event_id):
         """Show detailed view of a specific event"""

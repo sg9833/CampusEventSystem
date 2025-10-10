@@ -93,16 +93,46 @@ class SearchComponent(tk.Frame):
         # Placeholder behavior
         self._setup_placeholder()
         
-        # Advanced filters button
-        self.filters_btn = tk.Button(search_row, text='⚙️ Filters', command=self._show_filters_modal, bg='#F3F4F6', fg='#374151', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6, cursor='hand2')
-        self.filters_btn.pack(side='right', padx=(8, 0))
+        # Advanced filters button (canvas-based for macOS)
+        filters_btn_frame = tk.Frame(search_row, bg='white')
+        filters_btn_frame.pack(side='right', padx=(8, 0))
         
-        # Search button
-        search_btn = tk.Button(search_row, text='Search', command=self._execute_search, bg=self.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=16, pady=6, cursor='hand2')
-        search_btn.pack(side='right', padx=(8, 0))
+        self.filters_canvas = tk.Canvas(filters_btn_frame, width=85, height=30, bg='white', highlightthickness=0, cursor='hand2')
+        self.filters_canvas.pack()
+        
+        self.filters_rect = self.filters_canvas.create_rectangle(0, 0, 85, 30, fill='#F3F4F6', outline='', tags='btn')
+        self.filters_text = self.filters_canvas.create_text(42, 15, text='⚙️ Filters', fill='#374151', font=('Helvetica', 9, 'bold'), tags='btn')
+        
+        self.filters_canvas.tag_bind('btn', '<Button-1>', lambda e: self._show_filters_modal())
+        self.filters_canvas.tag_bind('btn', '<Enter>', lambda e: self.filters_canvas.itemconfig(self.filters_rect, fill='#E5E7EB'))
+        self.filters_canvas.tag_bind('btn', '<Leave>', lambda e: self._update_filters_button_color())
+        
+        # Search button (canvas-based for macOS)
+        search_btn_frame = tk.Frame(search_row, bg='white')
+        search_btn_frame.pack(side='right', padx=(8, 0))
+        
+        search_canvas = tk.Canvas(search_btn_frame, width=75, height=30, bg='white', highlightthickness=0, cursor='hand2')
+        search_canvas.pack()
+        
+        search_rect = search_canvas.create_rectangle(0, 0, 75, 30, fill=self.colors.get('secondary', '#3498DB'), outline='', tags='btn')
+        search_canvas.create_text(37, 15, text='Search', fill='#FFFFFF', font=('Helvetica', 9, 'bold'), tags='btn')
+        
+        search_canvas.tag_bind('btn', '<Button-1>', lambda e: self._execute_search())
+        search_canvas.tag_bind('btn', '<Enter>', lambda e: search_canvas.itemconfig(search_rect, fill='#2980B9'))
+        search_canvas.tag_bind('btn', '<Leave>', lambda e: search_canvas.itemconfig(search_rect, fill=self.colors.get('secondary', '#3498DB')))
+        
+        # Store initial filter button state
+        self.filter_count = 0
         
         # Filter tags container (initially hidden)
         self.tags_frame = tk.Frame(self, bg='white')
+    
+    def _update_filters_button_color(self):
+        """Update filter button color based on active filter count"""
+        if self.filter_count > 0:
+            self.filters_canvas.itemconfig(self.filters_rect, fill=self.colors.get('secondary', '#3498DB'))
+        else:
+            self.filters_canvas.itemconfig(self.filters_rect, fill='#F3F4F6')
         
         # Separator
         tk.Frame(self, bg='#E5E7EB', height=1).pack(fill='x')
@@ -254,15 +284,45 @@ class SearchComponent(tk.Frame):
         sort_dropdown['values'] = self.sort_options
         sort_dropdown.pack(fill='x', pady=(0, 20))
         
-        # Buttons
+        # Buttons (canvas-based for macOS)
         btn_frame = tk.Frame(form_frame, bg='white')
         btn_frame.pack(fill='x', pady=(20, 0))
         
-        tk.Button(btn_frame, text='Apply Filters', command=lambda: self._apply_filters(modal, start_date_entry if self.show_date_filter else None, end_date_entry if self.show_date_filter else None, category_vars, status_var if self.show_status_filter else None), bg=self.colors.get('success', '#27AE60'), fg='white', relief='flat', font=('Helvetica', 11, 'bold'), padx=20, pady=10).pack(fill='x', pady=(0, 8))
+        # Apply Filters button
+        apply_frame = tk.Frame(btn_frame, bg='white')
+        apply_frame.pack(fill='x', pady=(0, 8))
+        apply_canvas = tk.Canvas(apply_frame, height=44, bg='white', highlightthickness=0, cursor='hand2')
+        apply_canvas.pack(fill='x')
+        apply_rect = apply_canvas.create_rectangle(0, 0, 500, 44, fill=self.colors.get('success', '#27AE60'), outline='', tags='btn')
+        apply_canvas.create_text(250, 22, text='Apply Filters', fill='#FFFFFF', font=('Helvetica', 11, 'bold'), tags='btn')
+        apply_canvas.tag_bind('btn', '<Button-1>', lambda e: self._apply_filters(modal, start_date_entry if self.show_date_filter else None, end_date_entry if self.show_date_filter else None, category_vars, status_var if self.show_status_filter else None))
+        apply_canvas.tag_bind('btn', '<Enter>', lambda e: apply_canvas.itemconfig(apply_rect, fill='#229954'))
+        apply_canvas.tag_bind('btn', '<Leave>', lambda e: apply_canvas.itemconfig(apply_rect, fill=self.colors.get('success', '#27AE60')))
+        apply_canvas.bind('<Configure>', lambda e: apply_canvas.coords(apply_rect, 0, 0, e.width, 44) or apply_canvas.coords(apply_canvas.find_withtag('btn')[1], e.width/2, 22))
         
-        tk.Button(btn_frame, text='Clear Filters', command=lambda: self._clear_filters(modal, start_date_entry if self.show_date_filter else None, end_date_entry if self.show_date_filter else None, category_vars, status_var if self.show_status_filter else None), bg=self.colors.get('warning', '#F39C12'), fg='white', relief='flat', font=('Helvetica', 11, 'bold'), padx=20, pady=10).pack(fill='x', pady=(0, 8))
+        # Clear Filters button
+        clear_frame = tk.Frame(btn_frame, bg='white')
+        clear_frame.pack(fill='x', pady=(0, 8))
+        clear_canvas = tk.Canvas(clear_frame, height=44, bg='white', highlightthickness=0, cursor='hand2')
+        clear_canvas.pack(fill='x')
+        clear_rect = clear_canvas.create_rectangle(0, 0, 500, 44, fill=self.colors.get('warning', '#F39C12'), outline='', tags='btn')
+        clear_canvas.create_text(250, 22, text='Clear Filters', fill='#FFFFFF', font=('Helvetica', 11, 'bold'), tags='btn')
+        clear_canvas.tag_bind('btn', '<Button-1>', lambda e: self._clear_filters(modal, start_date_entry if self.show_date_filter else None, end_date_entry if self.show_date_filter else None, category_vars, status_var if self.show_status_filter else None))
+        clear_canvas.tag_bind('btn', '<Enter>', lambda e: clear_canvas.itemconfig(clear_rect, fill='#E67E22'))
+        clear_canvas.tag_bind('btn', '<Leave>', lambda e: clear_canvas.itemconfig(clear_rect, fill=self.colors.get('warning', '#F39C12')))
+        clear_canvas.bind('<Configure>', lambda e: clear_canvas.coords(clear_rect, 0, 0, e.width, 44) or clear_canvas.coords(clear_canvas.find_withtag('btn')[1], e.width/2, 22))
         
-        tk.Button(btn_frame, text='Cancel', command=modal.destroy, bg='#E5E7EB', fg='#374151', relief='flat', font=('Helvetica', 11, 'bold'), padx=20, pady=10).pack(fill='x')
+        # Cancel button
+        cancel_frame = tk.Frame(btn_frame, bg='white')
+        cancel_frame.pack(fill='x')
+        cancel_canvas = tk.Canvas(cancel_frame, height=44, bg='white', highlightthickness=0, cursor='hand2')
+        cancel_canvas.pack(fill='x')
+        cancel_rect = cancel_canvas.create_rectangle(0, 0, 500, 44, fill='#E5E7EB', outline='', tags='btn')
+        cancel_canvas.create_text(250, 22, text='Cancel', fill='#374151', font=('Helvetica', 11, 'bold'), tags='btn')
+        cancel_canvas.tag_bind('btn', '<Button-1>', lambda e: modal.destroy())
+        cancel_canvas.tag_bind('btn', '<Enter>', lambda e: cancel_canvas.itemconfig(cancel_rect, fill='#D1D5DB'))
+        cancel_canvas.tag_bind('btn', '<Leave>', lambda e: cancel_canvas.itemconfig(cancel_rect, fill='#E5E7EB'))
+        cancel_canvas.bind('<Configure>', lambda e: cancel_canvas.coords(cancel_rect, 0, 0, e.width, 44) or cancel_canvas.coords(cancel_canvas.find_withtag('btn')[1], e.width/2, 22))
 
     def _add_section_header(self, parent, text):
         """Add section header"""
@@ -307,10 +367,13 @@ class SearchComponent(tk.Frame):
         
         # Update filters button badge
         filter_count = len(self.active_filters)
+        self.filter_count = filter_count
         if filter_count > 0:
-            self.filters_btn.config(text=f'⚙️ Filters ({filter_count})', bg=self.colors.get('secondary', '#3498DB'), fg='white')
+            self.filters_canvas.itemconfig(self.filters_text, text=f'⚙️ Filters ({filter_count})', fill='#FFFFFF')
+            self.filters_canvas.itemconfig(self.filters_rect, fill=self.colors.get('secondary', '#3498DB'))
         else:
-            self.filters_btn.config(text='⚙️ Filters', bg='#F3F4F6', fg='#374151')
+            self.filters_canvas.itemconfig(self.filters_text, text='⚙️ Filters', fill='#374151')
+            self.filters_canvas.itemconfig(self.filters_rect, fill='#F3F4F6')
         
         # Close modal
         modal.destroy()
@@ -346,7 +409,9 @@ class SearchComponent(tk.Frame):
         
         # Update UI
         self._update_filter_tags()
-        self.filters_btn.config(text='⚙️ Filters', bg='#F3F4F6', fg='#374151')
+        self.filter_count = 0
+        self.filters_canvas.itemconfig(self.filters_text, text='⚙️ Filters', fill='#374151')
+        self.filters_canvas.itemconfig(self.filters_rect, fill='#F3F4F6')
         
         # Execute search
         self._execute_search()
@@ -435,10 +500,13 @@ class SearchComponent(tk.Frame):
         
         # Update filters button
         filter_count = len(self.active_filters)
+        self.filter_count = filter_count
         if filter_count > 0:
-            self.filters_btn.config(text=f'⚙️ Filters ({filter_count})')
+            self.filters_canvas.itemconfig(self.filters_text, text=f'⚙️ Filters ({filter_count})', fill='#FFFFFF')
+            self.filters_canvas.itemconfig(self.filters_rect, fill=self.colors.get('secondary', '#3498DB'))
         else:
-            self.filters_btn.config(text='⚙️ Filters', bg='#F3F4F6', fg='#374151')
+            self.filters_canvas.itemconfig(self.filters_text, text='⚙️ Filters', fill='#374151')
+            self.filters_canvas.itemconfig(self.filters_rect, fill='#F3F4F6')
         
         # Execute search
         self._execute_search()
@@ -469,5 +537,7 @@ class SearchComponent(tk.Frame):
         self.selected_sort.set(self.sort_options[0] if self.sort_options else 'Relevance')
         self.active_filters = {}
         self._update_filter_tags()
-        self.filters_btn.config(text='⚙️ Filters', bg='#F3F4F6', fg='#374151')
+        self.filter_count = 0
+        self.filters_canvas.itemconfig(self.filters_text, text='⚙️ Filters', fill='#374151')
+        self.filters_canvas.itemconfig(self.filters_rect, fill='#F3F4F6')
         self._execute_search()

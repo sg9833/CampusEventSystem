@@ -7,6 +7,7 @@ from tkcalendar import DateEntry
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
 from components.search_component import SearchComponent
+from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button
 
 
 class BrowseResourcesPage(tk.Frame):
@@ -75,7 +76,8 @@ class BrowseResourcesPage(tk.Frame):
         tk.Label(header, text='Filters', bg='white', fg=self.colors.get('primary', '#2C3E50'), font=('Helvetica', 14, 'bold')).pack(anchor='w')
         
         # Clear filters button
-        tk.Button(content, text='Clear All Filters', command=self._clear_filters, bg='#E5E7EB', fg='#374151', relief='flat', font=('Helvetica', 9), padx=12, pady=6).pack(fill='x', padx=16, pady=(0, 12))
+        clear_btn = create_secondary_button(content, 'Clear All Filters', self._clear_filters, width=220, height=34)
+        clear_btn.pack(fill='x', padx=16, pady=(0, 12))
         
         # Resource Type Filter
         self._add_filter_section(content, 'Resource Type')
@@ -184,7 +186,8 @@ class BrowseResourcesPage(tk.Frame):
             rb.pack(anchor='w', pady=1)
         
         # Apply button
-        tk.Button(content, text='Apply Filters', command=self._apply_filters, bg=self.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 10, 'bold'), padx=16, pady=10).pack(fill='x', padx=16, pady=(8, 16))
+        apply_btn = create_primary_button(content, 'Apply Filters', self._apply_filters, width=220, height=44)
+        apply_btn.pack(fill='x', padx=16, pady=(8, 16))
 
     def _add_filter_section(self, parent, title):
         """Add a filter section header"""
@@ -573,9 +576,11 @@ class BrowseResourcesPage(tk.Frame):
         btn_frame = tk.Frame(content, bg='white')
         btn_frame.pack(fill='x')
         
-        tk.Button(btn_frame, text='Check Availability', command=lambda: self._check_availability(resource), bg='#F3F4F6', fg='#374151', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=8).pack(side='left', fill='x', expand=True, padx=(0, 6))
+        check_btn = create_secondary_button(btn_frame, 'Check Availability', lambda: self._check_availability(resource), width=150, height=36)
+        check_btn.pack(side='left', fill='x', expand=True, padx=(0, 6))
         
-        tk.Button(btn_frame, text='Book Now', command=lambda: self._book_resource(resource), bg=self.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=8).pack(side='right', fill='x', expand=True, padx=(6, 0))
+        book_btn = create_primary_button(btn_frame, 'Book Now', lambda: self._book_resource(resource), width=110, height=36)
+        book_btn.pack(side='right', fill='x', expand=True, padx=(6, 0))
         
         return card
 
@@ -674,8 +679,10 @@ class BrowseResourcesPage(tk.Frame):
         btn_frame = tk.Frame(details_frame, bg='white')
         btn_frame.pack(fill='x', pady=(20, 0))
         
-        tk.Button(btn_frame, text='Check Availability', command=lambda: [modal.destroy(), self._check_availability(resource)], bg='#6B7280', fg='white', relief='flat', font=('Helvetica', 10, 'bold'), padx=20, pady=10).pack(side='left', fill='x', expand=True, padx=(0, 8))
-        tk.Button(btn_frame, text='Book This Resource', command=lambda: [modal.destroy(), self._book_resource(resource)], bg=self.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 10, 'bold'), padx=20, pady=10).pack(side='right', fill='x', expand=True, padx=(8, 0))
+        check_availability_btn = create_secondary_button(btn_frame, 'Check Availability', lambda: [modal.destroy(), self._check_availability(resource)], width=180, height=44)
+        check_availability_btn.pack(side='left', fill='x', expand=True, padx=(0, 8))
+        book_this_btn = create_primary_button(btn_frame, 'Book This Resource', lambda: [modal.destroy(), self._book_resource(resource)], width=180, height=44)
+        book_this_btn.pack(side='right', fill='x', expand=True, padx=(8, 0))
 
     def _add_detail_item(self, parent, label, value):
         """Add a detail item to modal"""
@@ -691,10 +698,31 @@ class BrowseResourcesPage(tk.Frame):
                           f"This would display a real-time calendar showing booked and available time slots.")
 
     def _book_resource(self, resource):
-        """Book a resource"""
-        messagebox.showinfo('Book Resource', 
-                          f"Booking form for '{resource.get('name', 'Resource')}' would open here.\n\n"
-                          f"This would allow you to select date, time, and submit a booking request.")
+        """Book a resource - open booking page with preselected resource"""
+        resource_id = resource.get('id')
+        if resource_id:
+            # Import here to avoid circular dependency
+            from pages.book_resource import BookResourcePage
+            
+            # Create modal window for booking
+            booking_modal = tk.Toplevel(self)
+            booking_modal.title(f"Book {resource.get('name', 'Resource')}")
+            booking_modal.geometry('900x800')
+            booking_modal.configure(bg='#ECF0F1')
+            booking_modal.transient(self.winfo_toplevel())
+            booking_modal.grab_set()
+            
+            # Center modal
+            booking_modal.update_idletasks()
+            x = (booking_modal.winfo_screenwidth() // 2) - 450
+            y = (booking_modal.winfo_screenheight() // 2) - 400
+            booking_modal.geometry(f'900x800+{x}+{y}')
+            
+            # Create booking page in modal
+            booking_page = BookResourcePage(booking_modal, self.controller, resource_id=resource_id)
+            booking_page.pack(fill='both', expand=True)
+        else:
+            messagebox.showerror('Error', 'Resource ID not available.')
 
     @staticmethod
     def _parse_dt(text):

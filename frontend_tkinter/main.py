@@ -488,80 +488,69 @@ class CampusEventApp(tk.Tk):
         self.keyboard_nav.register_shortcut('<Control-h>', self._toggle_high_contrast, "Toggle high contrast")
     
     def _create_navigation_bar(self):
-        """Create navigation bar with back/forward buttons."""
-        nav_bar = tk.Frame(self.main_container, bg=self.colors['bg'], height=40)
-        nav_bar.pack(fill=tk.X, padx=5, pady=5)
+        """Create modern navigation bar with back/forward buttons."""
+        # Modern dark navigation bar
+        nav_bar = tk.Frame(self.main_container, bg='#1E293B', height=50)
+        nav_bar.pack(fill=tk.X, padx=0, pady=0)
         nav_bar.pack_propagate(False)
         
-        # Back button
-        self.back_button = tk.Button(
-            nav_bar,
-            text="← Back",
-            command=self._go_back,
-            bg=self.colors['primary'],
-            fg="white",
-            font=("Arial", 10),
-            padx=10,
-            pady=5,
-            state=tk.DISABLED
-        )
-        self.back_button.pack(side=tk.LEFT, padx=2)
-        self.focus_indicator.add_focus_ring(self.back_button)
+        # Left side - Navigation buttons
+        left_frame = tk.Frame(nav_bar, bg='#1E293B')
+        left_frame.pack(side=tk.LEFT, padx=15, pady=8)
         
-        # Forward button
-        self.forward_button = tk.Button(
-            nav_bar,
-            text="Forward →",
-            command=self._go_forward,
-            bg=self.colors['primary'],
-            fg="white",
-            font=("Arial", 10),
-            padx=10,
-            pady=5,
-            state=tk.DISABLED
-        )
-        self.forward_button.pack(side=tk.LEFT, padx=2)
-        self.focus_indicator.add_focus_ring(self.forward_button)
+        # Back button - Canvas-based for macOS compatibility
+        self.back_canvas = tk.Canvas(left_frame, width=90, height=34, bg='#1E293B', highlightthickness=0)
+        self.back_canvas.pack(side=tk.LEFT, padx=(0, 8))
+        self.back_enabled = False
+        self.back_rect = self.back_canvas.create_rectangle(0, 0, 90, 34, fill='#64748B', outline='', tags='btn')
+        self.back_text = self.back_canvas.create_text(45, 17, text="← Back", font=("Helvetica", 11, 'bold'), fill='#FFFFFF', tags='btn')
+        self.back_canvas.tag_bind('btn', '<Button-1>', lambda e: self._go_back() if self.back_enabled else None)
+        self.back_canvas.tag_bind('btn', '<Enter>', lambda e: self.back_canvas.itemconfig(self.back_rect, fill='#2563EB') if self.back_enabled else None)
+        self.back_canvas.tag_bind('btn', '<Leave>', lambda e: self.back_canvas.itemconfig(self.back_rect, fill='#3B82F6') if self.back_enabled else None)
         
-        # Current page label
+        # Forward button - Canvas-based for macOS compatibility
+        self.forward_canvas = tk.Canvas(left_frame, width=110, height=34, bg='#1E293B', highlightthickness=0)
+        self.forward_canvas.pack(side=tk.LEFT, padx=(0, 8))
+        self.forward_enabled = False
+        self.forward_rect = self.forward_canvas.create_rectangle(0, 0, 110, 34, fill='#64748B', outline='', tags='btn')
+        self.forward_text = self.forward_canvas.create_text(55, 17, text="Forward →", font=("Helvetica", 11, 'bold'), fill='#FFFFFF', tags='btn')
+        self.forward_canvas.tag_bind('btn', '<Button-1>', lambda e: self._go_forward() if self.forward_enabled else None)
+        self.forward_canvas.tag_bind('btn', '<Enter>', lambda e: self.forward_canvas.itemconfig(self.forward_rect, fill='#2563EB') if self.forward_enabled else None)
+        self.forward_canvas.tag_bind('btn', '<Leave>', lambda e: self.forward_canvas.itemconfig(self.forward_rect, fill='#3B82F6') if self.forward_enabled else None)
+        
+        # Center - Current page label
         self.page_label = tk.Label(
             nav_bar,
             text="",
-            bg=self.colors['bg'],
-            fg=self.colors['fg'],
-            font=("Arial", 11, "bold")
+            bg='#1E293B',
+            fg='#F1F5F9',
+            font=("Helvetica", 13, "bold")
         )
         self.page_label.pack(side=tk.LEFT, padx=20)
         
-        # Notifications button
-        self.notif_button = tk.Button(
-            nav_bar,
-            text="🔔 Notifications",
-            command=self._show_notifications,
-            bg=self.colors['bg'],
-            fg=self.colors['fg'],
-            font=("Arial", 10),
-            padx=10,
-            pady=5,
-            relief=tk.FLAT
-        )
-        self.notif_button.pack(side=tk.RIGHT, padx=2)
-        self.focus_indicator.add_focus_ring(self.notif_button)
+        # Right side - User actions
+        right_frame = tk.Frame(nav_bar, bg='#1E293B')
+        right_frame.pack(side=tk.RIGHT, padx=15, pady=8)
         
-        # Profile button
-        self.profile_button = tk.Button(
-            nav_bar,
-            text="👤 Profile",
-            command=self._show_profile,
-            bg=self.colors['bg'],
-            fg=self.colors['fg'],
-            font=("Arial", 10),
-            padx=10,
-            pady=5,
-            relief=tk.FLAT
-        )
-        self.profile_button.pack(side=tk.RIGHT, padx=2)
-        self.focus_indicator.add_focus_ring(self.profile_button)
+        # Notifications button - Canvas-based for macOS compatibility
+        self.notif_canvas = tk.Canvas(right_frame, width=140, height=34, bg='#1E293B', highlightthickness=0)
+        self.notif_canvas.pack(side=tk.RIGHT, padx=(8, 0))
+        self.notif_rect = self.notif_canvas.create_rectangle(0, 0, 140, 34, fill='#2D3748', outline='', tags='btn')
+        self.notif_text = self.notif_canvas.create_text(70, 17, text="🔔 Notifications", font=("Helvetica", 11), fill='#F1F5F9', tags='btn')
+        self.notif_canvas.tag_bind('btn', '<Button-1>', lambda e: self._show_notifications())
+        self.notif_canvas.tag_bind('btn', '<Enter>', lambda e: self.notif_canvas.itemconfig(self.notif_rect, fill='#374151'))
+        self.notif_canvas.tag_bind('btn', '<Leave>', lambda e: self.notif_canvas.itemconfig(self.notif_rect, fill='#2D3748'))
+        self.notif_canvas.config(cursor='hand2')
+        
+        # Profile button - Canvas-based for macOS compatibility
+        self.profile_canvas = tk.Canvas(right_frame, width=110, height=34, bg='#1E293B', highlightthickness=0)
+        self.profile_canvas.pack(side=tk.RIGHT, padx=(8, 0))
+        self.profile_rect = self.profile_canvas.create_rectangle(0, 0, 110, 34, fill='#2D3748', outline='', tags='btn')
+        self.profile_text = self.profile_canvas.create_text(55, 17, text="👤 Profile", font=("Helvetica", 11), fill='#F1F5F9', tags='btn')
+        self.profile_canvas.tag_bind('btn', '<Button-1>', lambda e: self._show_profile())
+        self.profile_canvas.tag_bind('btn', '<Enter>', lambda e: self.profile_canvas.itemconfig(self.profile_rect, fill='#374151'))
+        self.profile_canvas.tag_bind('btn', '<Leave>', lambda e: self.profile_canvas.itemconfig(self.profile_rect, fill='#2D3748'))
+        self.profile_canvas.config(cursor='hand2')
         
         self.nav_bar = nav_bar
     
@@ -768,16 +757,28 @@ class CampusEventApp(tk.Tk):
                 self._update_nav_buttons()
     
     def _update_nav_buttons(self):
-        """Update back/forward button states."""
+        """Update back/forward button states with proper styling."""
         if self.nav_history.can_go_back():
-            self.back_button.config(state=tk.NORMAL)
+            self.back_enabled = True
+            self.back_canvas.itemconfig(self.back_rect, fill='#3B82F6')
+            self.back_canvas.itemconfig(self.back_text, fill='#FFFFFF')
+            self.back_canvas.config(cursor='hand2')
         else:
-            self.back_button.config(state=tk.DISABLED)
+            self.back_enabled = False
+            self.back_canvas.itemconfig(self.back_rect, fill='#64748B')
+            self.back_canvas.itemconfig(self.back_text, fill='#94A3B8')
+            self.back_canvas.config(cursor='arrow')
         
         if self.nav_history.can_go_forward():
-            self.forward_button.config(state=tk.NORMAL)
+            self.forward_enabled = True
+            self.forward_canvas.itemconfig(self.forward_rect, fill='#3B82F6')
+            self.forward_canvas.itemconfig(self.forward_text, fill='#FFFFFF')
+            self.forward_canvas.config(cursor='hand2')
         else:
-            self.forward_button.config(state=tk.DISABLED)
+            self.forward_enabled = False
+            self.forward_canvas.itemconfig(self.forward_rect, fill='#64748B')
+            self.forward_canvas.itemconfig(self.forward_text, fill='#94A3B8')
+            self.forward_canvas.config(cursor='arrow')
     
     def _go_to_dashboard(self):
         """Navigate to appropriate dashboard based on user role."""

@@ -1494,6 +1494,9 @@ Run manual tests for:
 **Issue**: Images not loading  
 **Solution**: Check `assets/` directory exists and paths are correct
 
+**Issue**: Buttons appear grey with invisible text on macOS ⚠️  
+**Solution**: This is a known macOS Tkinter limitation. See [MACOS_BUTTON_FIX.md](MACOS_BUTTON_FIX.md) for detailed fix using canvas-based buttons
+
 ## �️ Error Handler & Exception Management
 
 Comprehensive error handling system for graceful error management, logging, and user-friendly error messages.

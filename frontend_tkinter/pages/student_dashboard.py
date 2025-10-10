@@ -6,6 +6,7 @@ from datetime import datetime
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
 from utils.button_styles import ButtonStyles
+from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_danger_button
 
 
 class StudentDashboard(tk.Frame):
@@ -56,23 +57,35 @@ class StudentDashboard(tk.Frame):
         menu.pack(fill='both', expand=True, pady=(12, 12))
 
         def add_btn(text, cmd, icon='•'):
-            btn = tk.Button(
-                menu,
-                text=f"{icon}  {text}",
-                font=('Helvetica', 11),
-                bg='#2C3E50',  # Dark background
-                fg='#FFFFFF',  # White text
-                activebackground='#3498DB',  # Blue on click
-                activeforeground='#FFFFFF',  # White text on click
-                relief='flat',
-                anchor='w',
-                command=cmd,
-                padx=16,
-                pady=8,
-                cursor='hand2',
-                borderwidth=0
-            )
-            btn.pack(fill='x')
+            # Create canvas-based button for macOS compatibility
+            btn_frame = tk.Frame(menu, bg=colors.get('primary', '#2C3E50'))
+            btn_frame.pack(fill='x', pady=2)
+            
+            canvas = tk.Canvas(btn_frame, width=200, height=40, bg=colors.get('primary', '#2C3E50'), 
+                             highlightthickness=0, cursor='hand2')
+            canvas.pack(fill='x')
+            
+            # Button background (initially same as sidebar)
+            rect = canvas.create_rectangle(0, 0, 200, 40, fill=colors.get('primary', '#2C3E50'), 
+                                         outline='', tags='btn')
+            # Button text
+            text_label = f"{icon}  {text}"
+            text_id = canvas.create_text(16, 20, text=text_label, fill='#FFFFFF', 
+                                        font=('Helvetica', 11), anchor='w', tags='btn')
+            
+            # Hover effects
+            def on_enter(e):
+                canvas.itemconfig(rect, fill='#3498DB')
+            
+            def on_leave(e):
+                canvas.itemconfig(rect, fill=colors.get('primary', '#2C3E50'))
+            
+            def on_click(e):
+                cmd()
+            
+            canvas.tag_bind('btn', '<Enter>', on_enter)
+            canvas.tag_bind('btn', '<Leave>', on_leave)
+            canvas.tag_bind('btn', '<Button-1>', on_click)
 
         add_btn('Dashboard', self._render_dashboard, icon='🏠')
         add_btn('Browse Events', self._render_browse_events, icon='🗂️')
@@ -106,10 +119,12 @@ class StudentDashboard(tk.Frame):
         self.search_var = tk.StringVar()
         search_entry = tk.Entry(search_frame, textvariable=self.search_var)
         search_entry.pack(side='left')
-        ButtonStyles.create_button(search_frame, text='Search', command=self._on_search, variant='primary', height=1).pack(side='left', padx=(6, 0))
+        search_btn = create_primary_button(search_frame, 'Search', self._on_search, width=80, height=30)
+        search_btn.pack(side='left', padx=(6, 0))
 
         # Notifications icon
-        ButtonStyles.create_icon_button(top, text='🔔', command=lambda: messagebox.showinfo('Notifications', 'No new notifications')).pack(side='right', padx=(0, 8))
+        notif_btn = create_secondary_button(top, '🔔', lambda: messagebox.showinfo('Notifications', 'No new notifications'), width=40, height=30)
+        notif_btn.pack(side='right', padx=(0, 8))
 
         # Content container (scrollable)
         content_container = tk.Frame(main, bg=self.controller.colors.get('background', '#ECF0F1'))
@@ -217,7 +232,8 @@ class StudentDashboard(tk.Frame):
             when = ev.get('start_time') or ''
             tk.Label(row, text=f"📅 {title}", bg='white', font=('Helvetica', 12, 'bold')).pack(side='left', padx=(4, 8))
             tk.Label(row, text=when, bg='white', fg='#6B7280').pack(side='left')
-            ButtonStyles.create_button(row, text='Register', command=lambda e=ev: self._register_event(e), variant='success', height=1).pack(side='right')
+            reg_btn = create_success_button(row, 'Register', lambda e=ev: self._register_event(e), width=90, height=30)
+            reg_btn.pack(side='right')
 
         # Recent activities
         recent = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
@@ -265,14 +281,12 @@ class StudentDashboard(tk.Frame):
         tv.pack(fill='both', expand=True, padx=16, pady=(0, 16))
 
     def _render_book_resources(self):
-        self._clear_content()
-        tk.Label(self.content, text='Book Resources', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
-        tk.Label(self.content, text='Resource booking UI not implemented yet.', bg=self.controller.colors.get('background', '#ECF0F1')).pack(anchor='w', padx=16, pady=(4, 16))
+        """Navigate to browse resources page with booking functionality"""
+        self.controller.navigate('browse_resources')
 
     def _render_profile_settings(self):
-        self._clear_content()
-        tk.Label(self.content, text='Profile Settings', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
-        tk.Label(self.content, text='Update profile coming soon.', bg=self.controller.colors.get('background', '#ECF0F1')).pack(anchor='w', padx=16, pady=(4, 16))
+        """Navigate to profile page"""
+        self.controller.navigate('profile')
 
     def _render_events_table(self, events):
         cols = ('title', 'start_time', 'venue', 'actions')
@@ -296,7 +310,8 @@ class StudentDashboard(tk.Frame):
                 tk.Label(row, text=e.get('title') or 'Untitled', bg='white').grid(row=0, column=0, sticky='w', padx=8, pady=8)
                 tk.Label(row, text=e.get('start_time') or '', bg='white', fg='#6B7280').grid(row=0, column=1, sticky='w', padx=8)
                 tk.Label(row, text=e.get('venue') or '', bg='white', fg='#6B7280').grid(row=0, column=2, sticky='w', padx=8)
-                ButtonStyles.create_button(row, text='Register', command=lambda ev=e: self._register_event(ev), variant='success', height=1).grid(row=0, column=3, padx=8)
+                reg_btn = create_success_button(row, 'Register', lambda ev=e: self._register_event(ev), width=90, height=30)
+                reg_btn.grid(row=0, column=3, padx=8)
 
     # Actions
     def _register_event(self, event):

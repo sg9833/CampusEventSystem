@@ -6,6 +6,7 @@ from datetime import datetime
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
 from utils.button_styles import ButtonStyles
+from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_danger_button, create_warning_button
 
 
 class AdminDashboard(tk.Frame):
@@ -59,21 +60,35 @@ class AdminDashboard(tk.Frame):
         menu.pack(fill='both', expand=True, pady=(12, 12))
 
         def add_btn(text, cmd, icon='•'):
-            btn = tk.Button(
-                menu,
-                text=f"{icon}  {text}",
-                font=('Helvetica', 11),
-                bg=colors.get('primary', '#2C3E50'),
-                fg='white',
-                activebackground=colors.get('secondary', '#3498DB'),
-                activeforeground='white',
-                relief='flat',
-                anchor='w',
-                command=cmd,
-                padx=16,
-                pady=8,
-            )
-            btn.pack(fill='x')
+            # Create canvas-based button for macOS compatibility
+            btn_frame = tk.Frame(menu, bg=colors.get('primary', '#2C3E50'))
+            btn_frame.pack(fill='x', pady=2)
+            
+            canvas = tk.Canvas(btn_frame, width=200, height=40, bg=colors.get('primary', '#2C3E50'), 
+                             highlightthickness=0, cursor='hand2')
+            canvas.pack(fill='x')
+            
+            # Button background (initially same as sidebar)
+            rect = canvas.create_rectangle(0, 0, 200, 40, fill=colors.get('primary', '#2C3E50'), 
+                                         outline='', tags='btn')
+            # Button text
+            text_label = f"{icon}  {text}"
+            text_id = canvas.create_text(16, 20, text=text_label, fill='#FFFFFF', 
+                                        font=('Helvetica', 11), anchor='w', tags='btn')
+            
+            # Hover effects
+            def on_enter(e):
+                canvas.itemconfig(rect, fill=colors.get('secondary', '#3498DB'))
+            
+            def on_leave(e):
+                canvas.itemconfig(rect, fill=colors.get('primary', '#2C3E50'))
+            
+            def on_click(e):
+                cmd()
+            
+            canvas.tag_bind('btn', '<Enter>', on_enter)
+            canvas.tag_bind('btn', '<Leave>', on_leave)
+            canvas.tag_bind('btn', '<Button-1>', on_click)
 
         add_btn('Dashboard', self._render_dashboard, icon='🏠')
         add_btn('Manage Events', self._render_manage_events, icon='📅')
@@ -109,7 +124,8 @@ class AdminDashboard(tk.Frame):
         tk.Label(status_frame, text='System Operational', bg='white', fg='#27AE60', font=('Helvetica', 10, 'bold')).pack(side='left', padx=(4, 0))
 
         # Notifications icon
-        tk.Button(top, text='🔔', relief='flat', bg='white', command=self._show_notifications).pack(side='right', padx=(0, 8))
+        notif_btn = create_secondary_button(top, '🔔', self._show_notifications, width=40, height=30)
+        notif_btn.pack(side='right', padx=(0, 8))
 
         # Content container (scrollable)
         content_container = tk.Frame(main, bg=self.controller.colors.get('background', '#ECF0F1'))
@@ -259,8 +275,10 @@ class AdminDashboard(tk.Frame):
                 
                 btn_frame = tk.Frame(row, bg='white')
                 btn_frame.pack(side='right')
-                tk.Button(btn_frame, text='✓ Approve', command=lambda e=event: self._approve_event(e), bg='#27AE60', fg='white', relief='flat', padx=12, pady=4).pack(side='left', padx=(0, 4))
-                tk.Button(btn_frame, text='✗ Reject', command=lambda e=event: self._reject_event(e), bg='#E74C3C', fg='white', relief='flat', padx=12, pady=4).pack(side='left')
+                approve_btn = create_success_button(btn_frame, '✓ Approve', lambda e=event: self._approve_event(e), width=100, height=30)
+                approve_btn.pack(side='left', padx=(0, 4))
+                reject_btn = create_danger_button(btn_frame, '✗ Reject', lambda e=event: self._reject_event(e), width=90, height=30)
+                reject_btn.pack(side='left')
 
         # Pending Bookings
         if self.pending_bookings:
@@ -276,8 +294,10 @@ class AdminDashboard(tk.Frame):
                 
                 btn_frame = tk.Frame(row, bg='white')
                 btn_frame.pack(side='right')
-                tk.Button(btn_frame, text='✓ Approve', command=lambda b=booking: self._approve_booking(b), bg='#27AE60', fg='white', relief='flat', padx=12, pady=4).pack(side='left', padx=(0, 4))
-                tk.Button(btn_frame, text='✗ Reject', command=lambda b=booking: self._reject_booking(b), bg='#E74C3C', fg='white', relief='flat', padx=12, pady=4).pack(side='left')
+                approve_btn = create_success_button(btn_frame, '✓ Approve', lambda b=booking: self._approve_booking(b), width=100, height=30)
+                approve_btn.pack(side='left', padx=(0, 4))
+                reject_btn = create_danger_button(btn_frame, '✗ Reject', lambda b=booking: self._reject_booking(b), width=90, height=30)
+                reject_btn.pack(side='left')
 
         if not self.pending_events and not self.pending_bookings:
             tk.Label(approvals_frame, text='No pending approvals', bg='white', fg='#6B7280').pack(padx=12, pady=20)
@@ -356,10 +376,14 @@ class AdminDashboard(tk.Frame):
         tab_frame = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
         tab_frame.pack(fill='x', padx=16, pady=(0, 8))
         
-        tk.Button(tab_frame, text='All Events', command=lambda: self._filter_events('all'), bg=colors.get('secondary', '#3498DB'), fg='white', relief='flat', padx=12, pady=6).pack(side='left', padx=(0, 4))
-        tk.Button(tab_frame, text='Pending', command=lambda: self._filter_events('pending'), bg=colors.get('warning', '#F39C12'), fg='white', relief='flat', padx=12, pady=6).pack(side='left', padx=4)
-        tk.Button(tab_frame, text='Approved', command=lambda: self._filter_events('approved'), bg=colors.get('success', '#27AE60'), fg='white', relief='flat', padx=12, pady=6).pack(side='left', padx=4)
-        tk.Button(tab_frame, text='Rejected', command=lambda: self._filter_events('rejected'), bg='#E74C3C', fg='white', relief='flat', padx=12, pady=6).pack(side='left', padx=4)
+        all_btn = create_primary_button(tab_frame, 'All Events', lambda: self._filter_events('all'), width=100, height=36)
+        all_btn.pack(side='left', padx=(0, 4))
+        pending_btn = create_warning_button(tab_frame, 'Pending', lambda: self._filter_events('pending'), width=90, height=36)
+        pending_btn.pack(side='left', padx=4)
+        approved_btn = create_success_button(tab_frame, 'Approved', lambda: self._filter_events('approved'), width=100, height=36)
+        approved_btn.pack(side='left', padx=4)
+        rejected_btn = create_danger_button(tab_frame, 'Rejected', lambda: self._filter_events('rejected'), width=90, height=36)
+        rejected_btn.pack(side='left', padx=4)
 
         # Events table
         self._render_events_management_table(self.all_events)
@@ -414,10 +438,13 @@ class AdminDashboard(tk.Frame):
                 btn_frame.grid(row=0, column=5, padx=8)
                 
                 if status == 'Pending':
-                    tk.Button(btn_frame, text='✓', command=lambda e=event: self._approve_event(e), bg='#27AE60', fg='white', relief='flat', width=3).pack(side='left', padx=2)
-                    tk.Button(btn_frame, text='✗', command=lambda e=event: self._reject_event(e), bg='#E74C3C', fg='white', relief='flat', width=3).pack(side='left', padx=2)
+                    approve_icon_btn = create_success_button(btn_frame, '✓', lambda e=event: self._approve_event(e), width=30, height=30)
+                    approve_icon_btn.pack(side='left', padx=2)
+                    reject_icon_btn = create_danger_button(btn_frame, '✗', lambda e=event: self._reject_event(e), width=30, height=30)
+                    reject_icon_btn.pack(side='left', padx=2)
                 
-                tk.Button(btn_frame, text='View', command=lambda e=event: self._view_event_details(e), bg='#3498DB', fg='white', relief='flat', width=5).pack(side='left', padx=2)
+                view_btn = create_primary_button(btn_frame, 'View', lambda e=event: self._view_event_details(e), width=60, height=30)
+                view_btn.pack(side='left', padx=2)
 
     def _render_manage_resources(self):
         self._clear_content()
@@ -426,7 +453,8 @@ class AdminDashboard(tk.Frame):
         header_frame = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
         header_frame.pack(fill='x', padx=16, pady=(16, 8))
         tk.Label(header_frame, text='Manage Resources', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(side='left')
-        tk.Button(header_frame, text='+ Add Resource', command=self._add_resource, bg=colors.get('success', '#27AE60'), fg='white', relief='flat', font=('Helvetica', 10, 'bold'), padx=12, pady=6).pack(side='right')
+        add_resource_btn = create_success_button(header_frame, '+ Add Resource', self._add_resource, width=140, height=36)
+        add_resource_btn.pack(side='right')
 
         # Resources table
         frame = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
@@ -458,8 +486,10 @@ class AdminDashboard(tk.Frame):
                 
                 btn_frame = tk.Frame(row, bg='white')
                 btn_frame.grid(row=0, column=5, padx=8)
-                tk.Button(btn_frame, text='Edit', command=lambda r=resource: self._edit_resource(r), bg='#3498DB', fg='white', relief='flat', width=5).pack(side='left', padx=2)
-                tk.Button(btn_frame, text='Delete', command=lambda r=resource: self._delete_resource(r), bg='#E74C3C', fg='white', relief='flat', width=6).pack(side='left', padx=2)
+                edit_btn = create_primary_button(btn_frame, 'Edit', lambda r=resource: self._edit_resource(r), width=60, height=30)
+                edit_btn.pack(side='left', padx=2)
+                delete_btn = create_danger_button(btn_frame, 'Delete', lambda r=resource: self._delete_resource(r), width=70, height=30)
+                delete_btn.pack(side='left', padx=2)
 
     def _render_manage_users(self):
         self._clear_content()
@@ -499,11 +529,14 @@ class AdminDashboard(tk.Frame):
                 btn_frame.grid(row=0, column=5, padx=8)
                 
                 if is_active:
-                    tk.Button(btn_frame, text='Block', command=lambda u=user: self._block_user(u), bg='#E74C3C', fg='white', relief='flat', width=6).pack(side='left', padx=2)
+                    block_btn = create_danger_button(btn_frame, 'Block', lambda u=user: self._block_user(u), width=70, height=30)
+                    block_btn.pack(side='left', padx=2)
                 else:
-                    tk.Button(btn_frame, text='Unblock', command=lambda u=user: self._unblock_user(u), bg='#27AE60', fg='white', relief='flat', width=7).pack(side='left', padx=2)
+                    unblock_btn = create_success_button(btn_frame, 'Unblock', lambda u=user: self._unblock_user(u), width=80, height=30)
+                    unblock_btn.pack(side='left', padx=2)
                 
-                tk.Button(btn_frame, text='View', command=lambda u=user: self._view_user_details(u), bg='#3498DB', fg='white', relief='flat', width=5).pack(side='left', padx=2)
+                view_btn = create_primary_button(btn_frame, 'View', lambda u=user: self._view_user_details(u), width=60, height=30)
+                view_btn.pack(side='left', padx=2)
 
     def _render_booking_approvals(self):
         self._clear_content()
@@ -536,8 +569,10 @@ class AdminDashboard(tk.Frame):
                 
                 btn_frame = tk.Frame(row, bg='white')
                 btn_frame.grid(row=0, column=6, padx=8)
-                tk.Button(btn_frame, text='✓ Approve', command=lambda b=booking: self._approve_booking(b), bg='#27AE60', fg='white', relief='flat', padx=10, pady=4).pack(side='left', padx=2)
-                tk.Button(btn_frame, text='✗ Reject', command=lambda b=booking: self._reject_booking(b), bg='#E74C3C', fg='white', relief='flat', padx=10, pady=4).pack(side='left', padx=2)
+                approve_booking_btn = create_success_button(btn_frame, '✓ Approve', lambda b=booking: self._approve_booking(b), width=100, height=30)
+                approve_booking_btn.pack(side='left', padx=2)
+                reject_booking_btn = create_danger_button(btn_frame, '✗ Reject', lambda b=booking: self._reject_booking(b), width=90, height=30)
+                reject_booking_btn.pack(side='left', padx=2)
 
     def _render_reports_analytics(self):
         self._clear_content()
@@ -605,8 +640,11 @@ class AdminDashboard(tk.Frame):
             tk.Label(info_frame, text=description, bg='white', fg='#6B7280', font=('Helvetica', 9)).pack(anchor='w', pady=(2, 0))
             
             status = 'ON' if enabled else 'OFF'
-            color = '#27AE60' if enabled else '#E74C3C'
-            tk.Button(setting_row, text=status, bg=color, fg='white', relief='flat', width=6, command=lambda t=title: messagebox.showinfo('Settings', f'{t} toggled')).pack(side='right')
+            if enabled:
+                toggle_btn = create_success_button(setting_row, status, lambda t=title: messagebox.showinfo('Settings', f'{t} toggled'), width=70, height=32)
+            else:
+                toggle_btn = create_danger_button(setting_row, status, lambda t=title: messagebox.showinfo('Settings', f'{t} toggled'), width=70, height=32)
+            toggle_btn.pack(side='right')
 
     # Action methods
     def _approve_event(self, event):

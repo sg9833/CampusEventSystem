@@ -8,6 +8,7 @@ from utils.api_client import APIClient
 from utils.session_manager import SessionManager
 from utils.button_styles import ButtonStyles
 from components.search_component import SearchComponent
+from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button
 
 
 class BrowseEventsPage(tk.Frame):
@@ -324,19 +325,22 @@ class BrowseEventsPage(tk.Frame):
         btn_frame = tk.Frame(card, bg='white')
         btn_frame.pack(fill='x', padx=12, pady=12)
 
-        tk.Button(btn_frame, text='View Details', command=lambda: self._show_event_details(event), bg='#F3F4F6', fg='#374151', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', fill='x', expand=True, padx=(0, 4))
+        details_btn = create_secondary_button(btn_frame, 'View Details', lambda: self._show_event_details(event), width=110, height=32)
+        details_btn.pack(side='left', fill='x', expand=True, padx=(0, 4))
         
         # Register button (check if already registered or full)
         can_register = True
         register_text = 'Register'
-        register_bg = colors.get('secondary', '#3498DB')
         
         if available != 'N/A' and available <= 0:
             can_register = False
             register_text = 'Full'
-            register_bg = '#E74C3C'
         
-        register_btn = tk.Button(btn_frame, text=register_text, command=lambda: self._register_event(event) if can_register else None, bg=register_bg, fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6, state='normal' if can_register else 'disabled')
+        if can_register:
+            register_btn = create_success_button(btn_frame, register_text, lambda: self._register_event(event), width=100, height=32)
+        else:
+            register_btn = create_secondary_button(btn_frame, register_text, None, width=100, height=32)
+            register_btn.config(state='disabled')
         register_btn.pack(side='right', fill='x', expand=True, padx=(4, 0))
 
         return card
@@ -357,7 +361,9 @@ class BrowseEventsPage(tk.Frame):
         pag_container.pack()
 
         # Previous button
-        prev_btn = tk.Button(pag_container, text='← Previous', command=self._prev_page, bg='white', fg='#374151', relief='flat', font=('Helvetica', 9), padx=12, pady=6, state='normal' if self.current_page > 1 else 'disabled', highlightthickness=1, highlightbackground='#E5E7EB')
+        prev_btn = create_secondary_button(pag_container, '← Previous', self._prev_page, width=100, height=34)
+        if self.current_page <= 1:
+            prev_btn.config(state='disabled')
         prev_btn.pack(side='left', padx=(0, 8))
 
         # Page numbers
@@ -367,13 +373,16 @@ class BrowseEventsPage(tk.Frame):
 
         for page in range(start_page, end_page + 1):
             if page == self.current_page:
-                btn = tk.Button(pag_container, text=str(page), bg=colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6, state='disabled')
+                btn = create_primary_button(pag_container, str(page), None, width=44, height=34)
+                btn.config(state='disabled')
             else:
-                btn = tk.Button(pag_container, text=str(page), command=lambda p=page: self._goto_page(p), bg='white', fg='#374151', relief='flat', font=('Helvetica', 9), padx=12, pady=6, highlightthickness=1, highlightbackground='#E5E7EB')
+                btn = create_secondary_button(pag_container, str(page), lambda p=page: self._goto_page(p), width=44, height=34)
             btn.pack(side='left', padx=2)
 
         # Next button
-        next_btn = tk.Button(pag_container, text='Next →', command=self._next_page, bg='white', fg='#374151', relief='flat', font=('Helvetica', 9), padx=12, pady=6, state='normal' if self.current_page < total_pages else 'disabled', highlightthickness=1, highlightbackground='#E5E7EB')
+        next_btn = create_secondary_button(pag_container, 'Next →', self._next_page, width=100, height=34)
+        if self.current_page >= total_pages:
+            next_btn.config(state='disabled')
         next_btn.pack(side='left', padx=(8, 0))
 
         # Page info
@@ -467,8 +476,10 @@ class BrowseEventsPage(tk.Frame):
         btn_frame = tk.Frame(content, bg='white')
         btn_frame.pack(fill='x', padx=20, pady=(0, 20))
         
-        tk.Button(btn_frame, text='Close', command=modal.destroy, bg='#6B7280', fg='white', relief='flat', font=('Helvetica', 10), padx=20, pady=8).pack(side='left', fill='x', expand=True, padx=(0, 4))
-        tk.Button(btn_frame, text='Register for Event', command=lambda: [self._register_event(event), modal.destroy()], bg=colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 10, 'bold'), padx=20, pady=8).pack(side='right', fill='x', expand=True, padx=(4, 0))
+        close_btn = create_secondary_button(btn_frame, 'Close', modal.destroy, width=120, height=40)
+        close_btn.pack(side='left', fill='x', expand=True, padx=(0, 4))
+        register_modal_btn = create_primary_button(btn_frame, 'Register for Event', lambda: [self._register_event(event), modal.destroy()], width=180, height=40)
+        register_modal_btn.pack(side='right', fill='x', expand=True, padx=(4, 0))
 
     def _register_event(self, event):
         """Register for an event"""
