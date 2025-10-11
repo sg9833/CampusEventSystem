@@ -1,0 +1,2 @@
+# python-dotenv for .env file support
+python-dotenv==1.0.0

@@ -262,6 +262,27 @@ class CampusEventApp(tk.Tk):
         self.error_handler = ErrorHandler()
         self.security = SecurityManager()
         
+        # Restore JWT token if user is already logged in
+        if self.session.is_logged_in():
+            token = self.session.get_token()
+            if token:
+                self.api.set_auth_token(token)
+                print(f"[DEBUG] JWT token restored from session")
+        
+        # Set up auth error callback to handle token expiration
+        def on_auth_error(status_code):
+            """Handle authentication errors by clearing session and redirecting to login"""
+            print(f"[DEBUG] Authentication error: {status_code}. Clearing session and redirecting to login.")
+            self.session.clear_session()
+            self.navigate('login')
+            from tkinter import messagebox
+            if status_code == 401:
+                messagebox.showerror("Session Expired", "Your session has expired. Please login again.")
+            else:
+                messagebox.showerror("Access Denied", "You don't have permission to access this resource.")
+        
+        self.api.set_auth_error_callback(on_auth_error)
+        
         # Navigation history
         self.nav_history = NavigationHistory()
         

@@ -38,10 +38,25 @@ class APIClient:
         self._request_count = {}  # Track requests per user/endpoint
         self._cache = None  # Will be initialized lazily
         self._loading_callbacks = []  # Callbacks to notify of loading state
+        self.on_auth_error_callback = None  # Callback for auth errors (401/403)
     
     def set_auth_token(self, token):
         """Set the Authorization header for all requests"""
         self.auth_token = token
+    
+    def clear_auth_token(self):
+        """Clear the authentication token"""
+        self.auth_token = None
+    
+    def set_auth_error_callback(self, callback):
+        """Set callback to handle authentication errors (401/403)"""
+        self.on_auth_error_callback = callback
+    
+    def _handle_auth_error(self, status_code: int):
+        """Handle authentication/authorization errors"""
+        self.clear_auth_token()
+        if self.on_auth_error_callback:
+            self.on_auth_error_callback(status_code)
     
     def _get_headers(self, headers=None):
         """Get headers including auth token if set"""
@@ -61,6 +76,11 @@ class APIClient:
                 headers=self._get_headers(headers), 
                 timeout=self.timeout
             )
+            
+            # Handle authentication errors
+            if response.status_code in [401, 403]:
+                self._handle_auth_error(response.status_code)
+            
             response.raise_for_status()
             return response.json()
         except requests.Timeout:
@@ -68,22 +88,30 @@ class APIClient:
         except requests.ConnectionError:
             raise requests.ConnectionError("Failed to connect to the server")
         except requests.HTTPError as e:
-            raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            if 'response' in locals():
+                raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            else:
+                raise requests.HTTPError(f"HTTP error: {str(e)}")
         except requests.RequestException as e:
             raise requests.RequestException(f"Request failed: {str(e)}")
         except json.JSONDecodeError:
             raise ValueError("Invalid JSON response from server")
     
-    def post(self, endpoint, data, headers=None):
-        """Make a POST request with JSON data"""
+    def post(self, endpoint, data=None, headers=None):
+        """Make a POST request to the API"""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         try:
             response = self.session.post(
-                url, 
-                json=data, 
-                headers=self._get_headers(headers), 
+                url,
+                json=data,
+                headers=self._get_headers(headers),
                 timeout=self.timeout
             )
+            
+            # Handle authentication errors
+            if response.status_code in [401, 403]:
+                self._handle_auth_error(response.status_code)
+            
             response.raise_for_status()
             return response.json()
         except requests.Timeout:
@@ -91,7 +119,10 @@ class APIClient:
         except requests.ConnectionError:
             raise requests.ConnectionError("Failed to connect to the server")
         except requests.HTTPError as e:
-            raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            if 'response' in locals():
+                raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            else:
+                raise requests.HTTPError(f"HTTP error: {str(e)}")
         except requests.RequestException as e:
             raise requests.RequestException(f"Request failed: {str(e)}")
         except json.JSONDecodeError:
@@ -107,6 +138,11 @@ class APIClient:
                 headers=self._get_headers(headers), 
                 timeout=self.timeout
             )
+            
+            # Handle authentication errors
+            if response.status_code in [401, 403]:
+                self._handle_auth_error(response.status_code)
+            
             response.raise_for_status()
             return response.json()
         except requests.Timeout:
@@ -114,7 +150,10 @@ class APIClient:
         except requests.ConnectionError:
             raise requests.ConnectionError("Failed to connect to the server")
         except requests.HTTPError as e:
-            raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            if 'response' in locals():
+                raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            else:
+                raise requests.HTTPError(f"HTTP error: {str(e)}")
         except requests.RequestException as e:
             raise requests.RequestException(f"Request failed: {str(e)}")
         except json.JSONDecodeError:
@@ -129,6 +168,11 @@ class APIClient:
                 headers=self._get_headers(headers), 
                 timeout=self.timeout
             )
+            
+            # Handle authentication errors
+            if response.status_code in [401, 403]:
+                self._handle_auth_error(response.status_code)
+            
             response.raise_for_status()
             # DELETE might not return JSON, so handle gracefully
             try:
@@ -140,7 +184,10 @@ class APIClient:
         except requests.ConnectionError:
             raise requests.ConnectionError("Failed to connect to the server")
         except requests.HTTPError as e:
-            raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            if 'response' in locals():
+                raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            else:
+                raise requests.HTTPError(f"HTTP error: {str(e)}")
         except requests.RequestException as e:
             raise requests.RequestException(f"Request failed: {str(e)}")
     

@@ -1,0 +1,80 @@
+{
+    "users": [
+        {
+            "id": 1,
+            "name": "Test Student",
+            "email": "student@test.com",
+            "role": "STUDENT",
+            "department": "Computer Science"
+        },
+        {
+            "id": 2,
+            "name": "Test Organizer",
+            "email": "organizer@test.com",
+            "role": "ORGANIZER",
+            "department": "Events"
+        },
+        {
+            "id": 3,
+            "name": "Test Admin",
+            "email": "admin@test.com",
+            "role": "ADMIN",
+            "department": "Administration"
+        }
+    ],
+    "events": [
+        {
+            "id": 1,
+            "title": "Tech Talk: AI in Education",
+            "description": "A comprehensive talk about AI applications in education",
+            "start_time": "2025-10-20T14:00:00",
+            "end_time": "2025-10-20T16:00:00",
+            "venue": "Main Auditorium",
+            "category": "academic",
+            "capacity": 200,
+            "available_seats": 150,
+            "organizer_id": 2,
+            "status": "upcoming"
+        },
+        {
+            "id": 2,
+            "title": "Cultural Festival 2025",
+            "description": "Annual cultural festival with performances and food",
+            "start_time": "2025-11-15T10:00:00",
+            "end_time": "2025-11-15T18:00:00",
+            "venue": "Campus Grounds",
+            "category": "cultural",
+            "capacity": 500,
+            "available_seats": 300,
+            "organizer_id": 2,
+            "status": "upcoming"
+        }
+    ],
+    "bookings": [
+        {
+            "id": 1,
+            "event_id": 1,
+            "user_id": 1,
+            "booking_date": "2025-10-10T10:00:00",
+            "status": "confirmed"
+        }
+    ],
+    "resources": [
+        {
+            "id": 1,
+            "name": "Projector",
+            "description": "HD Projector with HDMI",
+            "category": "equipment",
+            "quantity": 10,
+            "available": 7
+        },
+        {
+            "id": 2,
+            "name": "Conference Room A",
+            "description": "Seats 50 people with AV equipment",
+            "category": "venue",
+            "quantity": 1,
+            "available": 1
+        }
+    ]
+}

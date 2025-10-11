@@ -2,6 +2,7 @@ package com.campuscoord.controller;
 
 import com.campuscoord.dto.BookingRequest;
 import com.campuscoord.service.BookingService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,7 +21,7 @@ public class BookingController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createBooking(@RequestBody BookingRequest req) {
+    public ResponseEntity<?> createBooking(@Valid @RequestBody BookingRequest req) {
         try {
             LocalDateTime start = LocalDateTime.parse(req.getStartTime());
             LocalDateTime end = LocalDateTime.parse(req.getEndTime());

@@ -286,25 +286,34 @@ class RegisterPage(tk.Frame):
         def worker():
             try:
                 # Backend endpoint expected: POST /auth/register
-                self.api.post('auth/register', payload)
-                # Try auto-login
-                try:
-                    login_res = self.api.post('auth/login', {'email': payload['email'], 'password': payload['password']})
-                    # Use LoginPage behavior: store and navigate
-                    from utils.session_manager import SessionManager
-                    session = SessionManager()
-                    session.store_user(
-                        user_id=login_res.get('id'),
-                        username=login_res.get('email'),
-                        role=login_res.get('role'),
-                        token="",
-                    )
-                    self.after(0, lambda: (self._hide_spinner(), self.controller._go_to_dashboard()))
-                    messagebox.showinfo("Welcome", "Registration successful. You are now logged in.")
-                except Exception:
-                    # Fallback: go to login
-                    self.after(0, lambda: (self._hide_spinner(), self.controller.navigate('login')))
-                    messagebox.showinfo("Success", "Registration successful. Please log in.")
+                # Now returns JWT token directly
+                register_res = self.api.post('auth/register', payload)
+                
+                # Extract user data and JWT token from registration response
+                user_id = register_res.get('id')
+                email = register_res.get('email')
+                role = register_res.get('role')
+                token = register_res.get('token', '')  # Extract JWT token
+                
+                # Store session with JWT token (24 hours expiration)
+                from utils.session_manager import SessionManager
+                session = SessionManager()
+                session.store_user(
+                    user_id=user_id,
+                    username=email,
+                    role=role,
+                    token=token,
+                    token_expires_in=86400  # 24 hours
+                )
+                
+                # Set JWT token in API client for future requests
+                self.api.set_auth_token(token)
+                print(f"[DEBUG] JWT token stored after registration")
+                
+                # Navigate to dashboard
+                self.after(0, lambda: (self._hide_spinner(), self.controller._go_to_dashboard()))
+                messagebox.showinfo("Welcome", "Registration successful. You are now logged in.")
+                
             except Exception as e:
                 error_msg = str(e)
                 def on_err():

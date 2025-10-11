@@ -4,6 +4,8 @@
 # Python virtual environments
 venv/
 */venv/
+env/
+ENV/
 
 # VSCode settings
 .vscode/
@@ -17,3 +19,35 @@ target/
 # Temporary or build files
 *.class
 *.iml
+
+# Environment files (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDEs
+.idea/
+*.swp
+*.swo
+*~
+
+# Cache and session files
+cache/
+session.json
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/

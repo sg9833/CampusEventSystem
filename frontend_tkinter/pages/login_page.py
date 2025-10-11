@@ -408,18 +408,25 @@ class LoginPage(tk.Frame):
             data = self.api.post("auth/login", payload)
             print(f"[DEBUG] Login response: {data}")
             
-            # Extract user data
+            # Extract user data including JWT token
             user_id = data.get('id')
             email = data.get('email') or username
             role = data.get('role') or 'USER'
+            token = data.get('token', '')  # Extract JWT token
             
-            # Store session
+            # Store session with JWT token
+            # Token expires in 24 hours (86400 seconds)
             self.session.store_user(
                 user_id=user_id,
                 username=email,
                 role=role,
-                token=""
+                token=token,
+                token_expires_in=86400  # 24 hours
             )
+            
+            # Set JWT token in API client for future requests
+            self.api.set_auth_token(token)
+            print(f"[DEBUG] JWT token stored and set in API client")
             
             # Success callback
             def after_success():
