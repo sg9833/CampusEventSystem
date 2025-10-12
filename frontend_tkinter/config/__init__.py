@@ -23,4 +23,8 @@ __all__ = [
     'get_cache_dir',
     'get_log_dir',
     'Settings',
+    'API_BASE_URL',
 ]
+
+# Expose API_BASE_URL for backward compatibility
+API_BASE_URL = get_api_base_url()

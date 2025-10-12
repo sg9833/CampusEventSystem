@@ -51,6 +51,11 @@ sphinx-rtd-theme==1.3.0
 # Optional: Enhanced terminal output
 colorama==0.4.6
 
+# New frontend enhancements
+sv-ttk==2.5.5
+openpyxl==3.1.2
+reportlab==4.0.4
+
 # Note: tkinter is included with Python standard library
 # No need to install separately
 

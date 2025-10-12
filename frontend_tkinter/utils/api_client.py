@@ -61,8 +61,21 @@ class APIClient:
     def _get_headers(self, headers=None):
         """Get headers including auth token if set"""
         default_headers = {'Content-Type': 'application/json'}
-        if self.auth_token:
-            default_headers['Authorization'] = f'Bearer {self.auth_token}'
+        
+        # Get token from instance or fallback to SessionManager
+        token = self.auth_token
+        if not token:
+            # Try to get token from SessionManager if not set on this instance
+            try:
+                from utils.session_manager import SessionManager
+                session = SessionManager()
+                token = session.get_token()
+            except:
+                pass
+        
+        if token:
+            default_headers['Authorization'] = f'Bearer {token}'
+        
         if headers:
             default_headers.update(headers)
         return default_headers

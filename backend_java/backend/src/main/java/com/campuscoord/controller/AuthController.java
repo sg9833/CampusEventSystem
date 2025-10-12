@@ -6,6 +6,7 @@ import com.campuscoord.dto.LoginResponse;
 import com.campuscoord.dto.RegisterRequest;
 import com.campuscoord.exception.AuthenticationException;
 import com.campuscoord.exception.DuplicateResourceException;
+import com.campuscoord.model.User;
 import com.campuscoord.security.JwtUtil;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -28,7 +30,15 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
-        return userDao.findByEmail(req.getEmail())
+        String identifier = req.getEmail();  // Can be email or username
+        
+        // Try to find user by email first, then by username
+        Optional<User> userOpt = userDao.findByEmail(identifier);
+        if (userOpt.isEmpty()) {
+            userOpt = userDao.findByUsername(identifier);
+        }
+        
+        return userOpt
                 .map(user -> {
                     if (BCrypt.checkpw(req.getPassword(), user.getPasswordHash())) {
                         // Generate JWT token
@@ -57,12 +67,18 @@ public class AuthController {
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         String name = request.getName();
         String email = request.getEmail();
+        String username = request.getUsername();
         String password = request.getPassword();
         String role = request.getRole();
 
-        // Check if user already exists
+        // Check if user already exists by email
         if (userDao.findByEmail(email).isPresent()) {
             throw new DuplicateResourceException("User", "email", email);
+        }
+        
+        // Check if username already exists
+        if (userDao.findByUsername(username).isPresent()) {
+            throw new DuplicateResourceException("User", "username", username);
         }
 
         // Set default role if not provided
@@ -74,7 +90,7 @@ public class AuthController {
         String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
         // Create user using direct SQL (since we don't have a User entity save method)
-        int userId = userDao.createUser(name, email, hashedPassword, role);
+        int userId = userDao.createUser(name, email, username, hashedPassword, role);
 
         // Generate JWT token for newly registered user
         String token = jwtUtil.generateToken(email, role, userId);

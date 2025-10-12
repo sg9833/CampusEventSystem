@@ -776,7 +776,7 @@ class AdminDashboard(tk.Frame):
         try:
             self.session.clear_session()
         finally:
-            self.controller.show_page('LoginPage')
+            self.controller.navigate('login', add_to_history=False)
 
     # Utilities
     def _show_spinner(self):

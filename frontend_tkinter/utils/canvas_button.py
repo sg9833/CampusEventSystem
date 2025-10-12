@@ -171,9 +171,9 @@ class ButtonColors:
     }
     
     SECONDARY = {
-        'bg_color': '#6c757d',
-        'hover_color': '#5a6268',
-        'fg_color': 'white'
+        'bg_color': '#F3F4F6',
+        'hover_color': '#E5E7EB',
+        'fg_color': '#1F2937'
     }
     
     SUCCESS = {

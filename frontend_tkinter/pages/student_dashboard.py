@@ -90,8 +90,7 @@ class StudentDashboard(tk.Frame):
         add_btn('Dashboard', self._render_dashboard, icon='🏠')
         add_btn('Browse Events', self._render_browse_events, icon='🗂️')
         add_btn('My Registrations', self._render_my_registrations, icon='✅')
-        add_btn('Book Resources', self._render_book_resources, icon='📚')
-        add_btn('My Bookings', self._render_my_bookings, icon='📅')
+        # Note: Resource booking and My Bookings removed - organizers only
         add_btn('Profile Settings', self._render_profile_settings, icon='⚙️')
         add_btn('Logout', self._logout, icon='🚪')
 
@@ -154,11 +153,13 @@ class StudentDashboard(tk.Frame):
             except Exception as e:
                 errors.append(('events', str(e)))
                 self.events = []
-            try:
-                self.my_bookings = self.api.get('bookings/my') or []
-            except Exception as e:
-                errors.append(('bookings', str(e)))
-                self.my_bookings = []
+            # Note: Bookings removed - students cannot book resources
+            # try:
+            #     self.my_bookings = self.api.get('bookings/my') or []
+            # except Exception as e:
+            #     errors.append(('bookings', str(e)))
+            #     self.my_bookings = []
+            self.my_bookings = []  # Students don't have bookings
             try:
                 self.registered_events = self.api.get('events/registered') or []
             except Exception as e:
@@ -268,21 +269,23 @@ class StudentDashboard(tk.Frame):
         tk.Label(self.content, text='My Registrations', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
         self._render_events_table(self.registered_events)
 
-    def _render_my_bookings(self):
-        self._clear_content()
-        tk.Label(self.content, text='My Bookings', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
-        cols = ('id', 'resource_id', 'start_time', 'end_time', 'status')
-        tv = ttk.Treeview(self.content, columns=cols, show='headings')
-        for c in cols:
-            tv.heading(c, text=c.replace('_', ' ').title())
-            tv.column(c, width=140)
-        for b in self.my_bookings:
-            tv.insert('', 'end', values=(b.get('id'), b.get('resource_id'), b.get('start_time'), b.get('end_time'), b.get('status')))
-        tv.pack(fill='both', expand=True, padx=16, pady=(0, 16))
+    # My Bookings removed - students cannot book resources
+    # def _render_my_bookings(self):
+    #     self._clear_content()
+    #     tk.Label(self.content, text='My Bookings', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
+    #     cols = ('id', 'resource_id', 'start_time', 'end_time', 'status')
+    #     tv = ttk.Treeview(self.content, columns=cols, show='headings')
+    #     for c in cols:
+    #         tv.heading(c, text=c.replace('_', ' ').title())
+    #         tv.column(c, width=140)
+    #     for b in self.my_bookings:
+    #         tv.insert('', 'end', values=(b.get('id'), b.get('resource_id'), b.get('start_time'), b.get('end_time'), b.get('status')))
+    #     tv.pack(fill='both', expand=True, padx=16, pady=(0, 16))
 
-    def _render_book_resources(self):
-        """Navigate to browse resources page with booking functionality"""
-        self.controller.navigate('browse_resources')
+    # Resource booking removed - organizers only
+    # def _render_book_resources(self):
+    #     """Navigate to browse resources page with booking functionality"""
+    #     self.controller.navigate('browse_resources')
 
     def _render_profile_settings(self):
         """Navigate to profile page"""
@@ -322,7 +325,7 @@ class StudentDashboard(tk.Frame):
         try:
             self.session.clear_session()
         finally:
-            self.controller.show_page('LoginPage')
+            self.controller.navigate('login', add_to_history=False)
 
     def _on_search(self):
         q = (self.search_var.get() or '').lower().strip()

@@ -61,6 +61,10 @@ class RegisterPage(tk.Frame):
         form.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
         self._bind_mousewheel(canvas)
 
+        # Configure grid columns - give both columns proper weight
+        form.grid_columnconfigure(0, weight=0, minsize=200)  # Label column with minimum width
+        form.grid_columnconfigure(1, weight=1)  # Entry column expands
+
         # Header
         header = tk.Label(form, text="Create your account", bg='white', fg=self.controller.colors.get('primary', '#2C3E50'), font=("Helvetica", 20, 'bold'))
         header.grid(row=0, column=0, columnspan=2, sticky='w', padx=24, pady=(24, 12))
@@ -75,10 +79,9 @@ class RegisterPage(tk.Frame):
         row = self._add_confirm_password_field("Confirm Password", self.confirm_var, row)
 
         # Role dropdown
-        tk.Label(form, text="Role", bg='white', font=("Helvetica", 11)).grid(row=row, column=0, sticky='w', padx=24, pady=(8, 2))
+        tk.Label(form, text="Role", bg='white', fg='#2C3E50', font=("Helvetica", 11)).grid(row=row, column=0, sticky='nw', padx=(24, 12), pady=(8, 2))
         role_cb = ttk.Combobox(form, textvariable=self.role_var, values=self.ROLES, state='readonly')
-        role_cb.grid(row=row, column=1, sticky='ew', padx=24, pady=(8, 2))
-        form.grid_columnconfigure(1, weight=1)
+        role_cb.grid(row=row, column=1, sticky='ew', padx=(12, 24), pady=(8, 2))
         row += 1
         self._labels['role'] = self._add_hint_label(row)
         row += 1
@@ -92,14 +95,43 @@ class RegisterPage(tk.Frame):
         self._labels['terms'] = self._add_hint_label(row + 1)
         row += 2
 
-        # Register button with high contrast styling
-        self.register_btn = ButtonStyles.create_button(
-            form,
-            text="Register",
-            variant='success',
-            command=self._on_register_clicked
+        # Register button (Canvas-based for macOS compatibility)
+        self.register_enabled = True  # Track button state
+        button_container = tk.Frame(form, bg='white')
+        button_container.grid(row=row, column=0, columnspan=2, sticky='ew', padx=24, pady=(8, 16))
+        
+        self.register_canvas = tk.Canvas(
+            button_container,
+            width=400,
+            height=50,
+            bg='white',
+            highlightthickness=0
         )
-        self.register_btn.grid(row=row, column=0, columnspan=2, sticky='ew', padx=24, pady=(8, 16))
+        self.register_canvas.pack(fill='x', expand=True)
+        
+        # Draw the button rectangle
+        self.register_rect = self.register_canvas.create_rectangle(
+            0, 0, 400, 50,
+            fill='#28a745',
+            outline='',
+            tags='button'
+        )
+        
+        # Add button text
+        self.register_text = self.register_canvas.create_text(
+            200, 25,
+            text='REGISTER',
+            font=("Helvetica", 12, "bold"),
+            fill='white',
+            tags='button'
+        )
+        
+        # Bind events for button interaction
+        self.register_canvas.tag_bind('button', '<Button-1>', lambda e: self._on_register_clicked() if self.register_enabled else None)
+        self.register_canvas.tag_bind('button', '<Enter>', self._register_hover_enter)
+        self.register_canvas.tag_bind('button', '<Leave>', self._register_hover_leave)
+        self.register_canvas.config(cursor='hand2')
+        
         row += 1
 
         # Loading bar
@@ -108,20 +140,52 @@ class RegisterPage(tk.Frame):
         self._hide_spinner()
         row += 1
 
-        # Login link
+        # Login link (Canvas-based for macOS compatibility)
         link_frame = tk.Frame(form, bg='white')
         link_frame.grid(row=row, column=0, columnspan=2, pady=(8, 24))
         tk.Label(link_frame, text="Already have an account?", bg='white', font=("Helvetica", 10)).pack(side='left')
-        ButtonStyles.create_link_button(
+        
+        # Create canvas for login link
+        login_canvas = tk.Canvas(
             link_frame,
-            text="Login",
-            command=lambda: self.controller.navigate('login')
-        ).pack(side='left', padx=(6, 0))
+            width=50,
+            height=20,
+            bg='white',
+            highlightthickness=0
+        )
+        login_canvas.pack(side='left', padx=(6, 0))
+        
+        # Add login link text
+        login_text = login_canvas.create_text(
+            25, 10,
+            text='Login',
+            font=("Helvetica", 10, "underline"),
+            fill='#3047ff',
+            tags='login_link'
+        )
+        
+        # Bind events
+        login_canvas.tag_bind('login_link', '<Button-1>', lambda e: self.controller.navigate('login'))
+        login_canvas.tag_bind('login_link', '<Enter>', lambda e: login_canvas.itemconfig(login_text, fill='#60A5FA'))
+        login_canvas.tag_bind('login_link', '<Leave>', lambda e: login_canvas.itemconfig(login_text, fill='#3047ff'))
+        login_canvas.config(cursor='hand2')
 
     def _bind_mousewheel(self, canvas: tk.Canvas):
         def _on_mousewheel(event):
             canvas.yview_scroll(-1 if event.delta > 0 else 1, 'units')
         canvas.bind_all('<MouseWheel>', _on_mousewheel)
+
+    def _register_hover_enter(self, event):
+        """Change button color on hover."""
+        if self.register_enabled:
+            self.register_canvas.itemconfig(self.register_rect, fill='#218838')
+
+    def _register_hover_leave(self, event):
+        """Restore button color when not hovering."""
+        if self.register_enabled:
+            self.register_canvas.itemconfig(self.register_rect, fill='#28a745')
+        else:
+            self.register_canvas.itemconfig(self.register_rect, fill='#94D3A2')
 
     def _add_hint_label(self, row: int) -> tk.Label:
         lbl = tk.Label(self.form, text="", bg='white', fg=self.controller.colors.get('danger', '#E74C3C'), font=("Helvetica", 9))
@@ -129,10 +193,9 @@ class RegisterPage(tk.Frame):
         return lbl
 
     def _add_text_field(self, label: str, var: tk.StringVar, row: int, on_change=None) -> int:
-        tk.Label(self.form, text=label, bg='white', font=("Helvetica", 11)).grid(row=row, column=0, sticky='w', padx=24, pady=(8, 2))
+        tk.Label(self.form, text=label, bg='white', fg='#2C3E50', font=("Helvetica", 11)).grid(row=row, column=0, sticky='nw', padx=(24, 12), pady=(8, 2))
         entry = tk.Entry(self.form, textvariable=var, font=("Helvetica", 12))
-        entry.grid(row=row, column=1, sticky='ew', padx=24, pady=(8, 2))
-        self.form.grid_columnconfigure(1, weight=1)
+        entry.grid(row=row, column=1, sticky='ew', padx=(12, 24), pady=(8, 2))
         row += 1
         hint = self._add_hint_label(row)
         key = label.lower().split()[0]
@@ -146,16 +209,15 @@ class RegisterPage(tk.Frame):
         return row + 1
 
     def _add_password_field(self, label: str, var: tk.StringVar, row: int) -> int:
-        tk.Label(self.form, text=label, bg='white', font=("Helvetica", 11)).grid(row=row, column=0, sticky='w', padx=24, pady=(8, 2))
+        tk.Label(self.form, text=label, bg='white', fg='#2C3E50', font=("Helvetica", 11)).grid(row=row, column=0, sticky='nw', padx=(24, 12), pady=(8, 2))
         entry = tk.Entry(self.form, textvariable=var, show='•', font=("Helvetica", 12))
-        entry.grid(row=row, column=1, sticky='ew', padx=24, pady=(8, 2))
-        self.form.grid_columnconfigure(1, weight=1)
+        entry.grid(row=row, column=1, sticky='ew', padx=(12, 24), pady=(8, 2))
         row += 1
-        # Strength meter
+        # Compact strength meter - place in column 1 only, no full-width divider
         meter_frame = tk.Frame(self.form, bg='white')
-        meter_frame.grid(row=row, column=0, columnspan=2, sticky='ew', padx=24)
-        self.pwd_meter = ttk.Progressbar(meter_frame, maximum=100)
-        self.pwd_meter.pack(side='left', fill='x', expand=True)
+        meter_frame.grid(row=row, column=1, sticky='ew', padx=(12, 24), pady=(2, 0))
+        self.pwd_meter = ttk.Progressbar(meter_frame, maximum=100, length=150)
+        self.pwd_meter.pack(side='left')
         self.pwd_label = tk.Label(meter_frame, text="", bg='white', font=("Helvetica", 9))
         self.pwd_label.pack(side='left', padx=(8, 0))
         row += 1
@@ -166,10 +228,9 @@ class RegisterPage(tk.Frame):
         return row + 1
 
     def _add_confirm_password_field(self, label: str, var: tk.StringVar, row: int) -> int:
-        tk.Label(self.form, text=label, bg='white', font=("Helvetica", 11)).grid(row=row, column=0, sticky='w', padx=24, pady=(8, 2))
+        tk.Label(self.form, text=label, bg='white', fg='#2C3E50', font=("Helvetica", 11)).grid(row=row, column=0, sticky='nw', padx=(24, 12), pady=(8, 2))
         entry = tk.Entry(self.form, textvariable=var, show='•', font=("Helvetica", 12))
-        entry.grid(row=row, column=1, sticky='ew', padx=24, pady=(8, 2))
-        self.form.grid_columnconfigure(1, weight=1)
+        entry.grid(row=row, column=1, sticky='ew', padx=(12, 24), pady=(8, 2))
         row += 1
         hint = self._add_hint_label(row)
         self._labels['confirm'] = hint
@@ -275,7 +336,7 @@ class RegisterPage(tk.Frame):
             'name': self.fullname_var.get().strip(),
             'email': self.email_var.get().strip(),
             'password': self.password_var.get(),
-            'role': self.role_var.get(),
+            'role': self.role_var.get().lower(),  # Convert to lowercase for backend
             'username': self.username_var.get().strip(),
             'phone': self.phone_var.get().strip(),
             'department': self.dept_var.get().strip(),
@@ -326,7 +387,9 @@ class RegisterPage(tk.Frame):
     def _show_spinner(self):
         self.spinner.grid()
         self.spinner.start(10)
-        self.register_btn.config(state='disabled')
+        self.register_enabled = False
+        self.register_canvas.itemconfig(self.register_rect, fill='#94D3A2')  # Lighter green when disabled
+        self.register_canvas.config(cursor='arrow')
 
     def _hide_spinner(self):
         try:
@@ -334,4 +397,6 @@ class RegisterPage(tk.Frame):
         except Exception:
             pass
         self.spinner.grid_remove()
-        self.register_btn.config(state='normal')
+        self.register_enabled = True
+        self.register_canvas.itemconfig(self.register_rect, fill='#28a745')  # Restore normal green
+        self.register_canvas.config(cursor='hand2')

@@ -19,6 +19,10 @@ class BrowseResourcesPage(tk.Frame):
         self.api = APIClient()
         self.session = SessionManager()
         
+        # Check if user can book resources (organizers and admins only)
+        user_role = (self.session.get_role() or 'student').lower()
+        self.can_book = user_role in ['organizer', 'admin']
+        
         # Get colors
         self.colors = controller.colors if hasattr(controller, 'colors') else {
             'primary': '#2C3E50',
@@ -73,7 +77,7 @@ class BrowseResourcesPage(tk.Frame):
         # Sidebar header
         header = tk.Frame(content, bg='white')
         header.pack(fill='x', padx=16, pady=(16, 12))
-        tk.Label(header, text='Filters', bg='white', fg=self.colors.get('primary', '#2C3E50'), font=('Helvetica', 14, 'bold')).pack(anchor='w')
+        tk.Label(header, text='Filters', bg='white', fg='#1F2937', font=('Helvetica', 14, 'bold')).pack(anchor='w')
         
         # Clear filters button
         clear_btn = create_secondary_button(content, 'Clear All Filters', self._clear_filters, width=220, height=34)
@@ -96,7 +100,7 @@ class BrowseResourcesPage(tk.Frame):
         ]
         
         for value, label in resource_types:
-            rb = tk.Radiobutton(type_frame, text=label, variable=self.filter_type, value=value, bg='white', font=('Helvetica', 10), selectcolor='white', command=self._apply_filters)
+            rb = tk.Radiobutton(type_frame, text=label, variable=self.filter_type, value=value, bg='white', fg='#1F2937', font=('Helvetica', 10), selectcolor='white', command=self._apply_filters)
             rb.pack(anchor='w', pady=2)
         
         # Capacity Filter
@@ -105,7 +109,7 @@ class BrowseResourcesPage(tk.Frame):
         capacity_frame = tk.Frame(content, bg='white')
         capacity_frame.pack(fill='x', padx=16, pady=(0, 16))
         
-        tk.Label(capacity_frame, text='Minimum Capacity:', bg='white', fg='#6B7280', font=('Helvetica', 9)).pack(anchor='w')
+        tk.Label(capacity_frame, text='Minimum Capacity:', bg='white', fg='#1F2937', font=('Helvetica', 9)).pack(anchor='w')
         
         min_cap_frame = tk.Frame(capacity_frame, bg='white')
         min_cap_frame.pack(fill='x', pady=(2, 8))
@@ -113,10 +117,10 @@ class BrowseResourcesPage(tk.Frame):
         min_slider = tk.Scale(min_cap_frame, from_=0, to=500, orient='horizontal', variable=self.min_capacity, bg='white', highlightthickness=0, showvalue=0, command=lambda v: self._on_capacity_change())
         min_slider.pack(side='left', fill='x', expand=True)
         
-        self.min_label = tk.Label(min_cap_frame, text='0', bg='white', fg=self.colors.get('secondary', '#3498DB'), font=('Helvetica', 9, 'bold'), width=4)
+        self.min_label = tk.Label(min_cap_frame, text='0', bg='white', fg='#1F2937', font=('Helvetica', 9, 'bold'), width=4)
         self.min_label.pack(side='right')
         
-        tk.Label(capacity_frame, text='Maximum Capacity:', bg='white', fg='#6B7280', font=('Helvetica', 9)).pack(anchor='w')
+        tk.Label(capacity_frame, text='Maximum Capacity:', bg='white', fg='#1F2937', font=('Helvetica', 9)).pack(anchor='w')
         
         max_cap_frame = tk.Frame(capacity_frame, bg='white')
         max_cap_frame.pack(fill='x', pady=(2, 0))
@@ -124,7 +128,7 @@ class BrowseResourcesPage(tk.Frame):
         max_slider = tk.Scale(max_cap_frame, from_=0, to=500, orient='horizontal', variable=self.max_capacity, bg='white', highlightthickness=0, showvalue=0, command=lambda v: self._on_capacity_change())
         max_slider.pack(side='left', fill='x', expand=True)
         
-        self.max_label = tk.Label(max_cap_frame, text='500', bg='white', fg=self.colors.get('secondary', '#3498DB'), font=('Helvetica', 9, 'bold'), width=4)
+        self.max_label = tk.Label(max_cap_frame, text='500', bg='white', fg='#1F2937', font=('Helvetica', 9, 'bold'), width=4)
         self.max_label.pack(side='right')
         
         # Amenities Filter
@@ -147,7 +151,7 @@ class BrowseResourcesPage(tk.Frame):
         for key, label in amenity_options:
             var = tk.BooleanVar()
             self.amenities[key] = var
-            cb = tk.Checkbutton(amenities_frame, text=label, variable=var, bg='white', font=('Helvetica', 9), selectcolor='white', command=self._apply_filters)
+            cb = tk.Checkbutton(amenities_frame, text=label, variable=var, bg='white', fg='#1F2937', font=('Helvetica', 9), selectcolor='white', command=self._apply_filters)
             cb.pack(anchor='w', pady=2)
         
         # Availability Date Picker
@@ -156,22 +160,30 @@ class BrowseResourcesPage(tk.Frame):
         date_frame = tk.Frame(content, bg='white')
         date_frame.pack(fill='x', padx=16, pady=(0, 16))
         
-        tk.Label(date_frame, text='Select Date:', bg='white', fg='#6B7280', font=('Helvetica', 9)).pack(anchor='w', pady=(0, 4))
+        tk.Label(date_frame, text='Select Date:', bg='white', fg='#1F2937', font=('Helvetica', 9)).pack(anchor='w', pady=(0, 4))
         
-        try:
-            # Try to use DateEntry from tkcalendar
-            self.date_picker = DateEntry(date_frame, width=20, background=self.colors.get('secondary', '#3498DB'), foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd', mindate=datetime.now())
-            self.date_picker.pack(anchor='w', pady=(0, 8))
-            self.date_picker.bind('<<DateEntrySelected>>', lambda e: self._apply_filters())
-        except:
-            # Fallback to simple entry
-            date_entry = tk.Entry(date_frame, textvariable=self.filter_date, font=('Helvetica', 10), width=22)
-            date_entry.pack(anchor='w', pady=(0, 8))
-            date_entry.insert(0, datetime.now().strftime('%Y-%m-%d'))
-            tk.Label(date_frame, text='Format: YYYY-MM-DD', bg='white', fg='#9CA3AF', font=('Helvetica', 8)).pack(anchor='w')
+        # Use a simple Entry widget with explicit colors (DateEntry doesn't work well with macOS dark mode)
+        date_entry = tk.Entry(
+            date_frame, 
+            textvariable=self.filter_date, 
+            font=('Helvetica', 10), 
+            width=22,
+            fg='#1F2937',
+            bg='white',
+            insertbackground='#1F2937',
+            relief='solid',
+            borderwidth=1
+        )
+        date_entry.pack(anchor='w', pady=(0, 4))
+        date_entry.insert(0, datetime.now().strftime('%Y-%m-%d'))
+        date_entry.bind('<Return>', lambda e: self._apply_filters())
+        date_entry.bind('<FocusOut>', lambda e: self._apply_filters())
+        
+        # Add format hint below
+        tk.Label(date_frame, text='Format: YYYY-MM-DD (e.g., 2025-10-12)', bg='white', fg='#6B7280', font=('Helvetica', 8)).pack(anchor='w', pady=(0, 8))
         
         # Time slot filter
-        tk.Label(date_frame, text='Time Slot:', bg='white', fg='#6B7280', font=('Helvetica', 9)).pack(anchor='w', pady=(8, 4))
+        tk.Label(date_frame, text='Time Slot:', bg='white', fg='#1F2937', font=('Helvetica', 9)).pack(anchor='w', pady=(8, 4))
         
         self.time_slot = tk.StringVar(value='all')
         time_slots = [
@@ -182,7 +194,7 @@ class BrowseResourcesPage(tk.Frame):
         ]
         
         for value, label in time_slots:
-            rb = tk.Radiobutton(date_frame, text=label, variable=self.time_slot, value=value, bg='white', font=('Helvetica', 9), selectcolor='white', command=self._apply_filters)
+            rb = tk.Radiobutton(date_frame, text=label, variable=self.time_slot, value=value, bg='white', fg='#1F2937', font=('Helvetica', 9), selectcolor='white', command=self._apply_filters)
             rb.pack(anchor='w', pady=1)
         
         # Apply button
@@ -216,8 +228,13 @@ class BrowseResourcesPage(tk.Frame):
         # Title
         title_frame = tk.Frame(header_content, bg='white')
         title_frame.pack(fill='x')
-        tk.Label(title_frame, text='Browse Resources', bg='white', fg=self.colors.get('primary', '#2C3E50'), font=('Helvetica', 20, 'bold')).pack(anchor='w')
-        tk.Label(title_frame, text='Find and book campus resources', bg='white', fg='#6B7280', font=('Helvetica', 10)).pack(anchor='w')
+        tk.Label(title_frame, text='Browse Resources', bg='white', fg='#1F2937', font=('Helvetica', 20, 'bold')).pack(anchor='w')
+        
+        # Update subtitle based on user role
+        if self.can_book:
+            tk.Label(title_frame, text='Find and book campus resources for your events', bg='white', fg='#1F2937', font=('Helvetica', 10)).pack(anchor='w')
+        else:
+            tk.Label(title_frame, text='View available campus resources (booking available for organizers)', bg='white', fg='#1F2937', font=('Helvetica', 10)).pack(anchor='w')
         
         # SearchComponent below title
         search_frame = tk.Frame(header_content, bg='white')
@@ -291,7 +308,7 @@ class BrowseResourcesPage(tk.Frame):
         loading_frame = tk.Frame(self.content, bg=self.colors.get('background', '#ECF0F1'))
         loading_frame.pack(fill='both', expand=True, pady=50)
         
-        tk.Label(loading_frame, text='Loading resources...', bg=self.colors.get('background', '#ECF0F1'), fg='#6B7280', font=('Helvetica', 12)).pack()
+        tk.Label(loading_frame, text='Loading resources...', bg=self.colors.get('background', '#ECF0F1'), fg='#1F2937', font=('Helvetica', 12)).pack()
         
         spinner = ttk.Progressbar(loading_frame, mode='indeterminate', length=300)
         spinner.pack(pady=10)
@@ -387,16 +404,15 @@ class BrowseResourcesPage(tk.Frame):
         self.filter_type.set('all')
         self.min_capacity.set(0)
         self.max_capacity.set(500)
-        self.search_var.set('')
+        if hasattr(self, 'search_var'):
+            self.search_var.set('')
         self.time_slot.set('all')
         
         for var in self.amenities.values():
             var.set(False)
         
-        if hasattr(self, 'date_picker'):
-            self.date_picker.set_date(datetime.now())
-        else:
-            self.filter_date.set(datetime.now().strftime('%Y-%m-%d'))
+        # Set date to today
+        self.filter_date.set(datetime.now().strftime('%Y-%m-%d'))
         
         self._apply_filters()
 
@@ -414,7 +430,7 @@ class BrowseResourcesPage(tk.Frame):
         # Results count
         count_frame = tk.Frame(self.content, bg=self.colors.get('background', '#ECF0F1'))
         count_frame.pack(fill='x', pady=(0, 12))
-        tk.Label(count_frame, text=f'{len(self.filtered_resources)} resource{"s" if len(self.filtered_resources) != 1 else ""} found', bg=self.colors.get('background', '#ECF0F1'), fg='#6B7280', font=('Helvetica', 11)).pack(side='left')
+        tk.Label(count_frame, text=f'{len(self.filtered_resources)} resource{"s" if len(self.filtered_resources) != 1 else ""} found', bg=self.colors.get('background', '#ECF0F1'), fg='#1F2937', font=('Helvetica', 11)).pack(side='left')
         
         if not self.filtered_resources:
             # Empty state
@@ -422,8 +438,8 @@ class BrowseResourcesPage(tk.Frame):
             empty_frame.pack(fill='both', expand=True, pady=20)
             
             tk.Label(empty_frame, text='🔍', bg='white', font=('Helvetica', 48)).pack(pady=(40, 10))
-            tk.Label(empty_frame, text='No resources found', bg='white', fg='#374151', font=('Helvetica', 14, 'bold')).pack()
-            tk.Label(empty_frame, text='Try adjusting your filters', bg='white', fg='#6B7280', font=('Helvetica', 10)).pack(pady=(4, 40))
+            tk.Label(empty_frame, text='No resources found', bg='white', fg='#1F2937', font=('Helvetica', 14, 'bold')).pack()
+            tk.Label(empty_frame, text='Try adjusting your filters', bg='white', fg='#1F2937', font=('Helvetica', 10)).pack(pady=(4, 40))
         else:
             # Create grid of resource cards (2 columns)
             grid_frame = tk.Frame(self.content, bg=self.colors.get('background', '#ECF0F1'))
@@ -435,12 +451,14 @@ class BrowseResourcesPage(tk.Frame):
             for idx, resource in enumerate(self.filtered_resources):
                 row = idx // 2
                 col = idx % 2
-                card = self._create_resource_card(resource)
+                card = self._create_resource_card(resource, grid_frame)
                 card.grid(row=row, column=col, padx=(0, 12) if col == 0 else (0, 0), pady=(0, 12), sticky='nsew')
 
-    def _create_resource_card(self, resource):
+    def _create_resource_card(self, resource, parent=None):
         """Create a resource card"""
-        card = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB', cursor='hand2')
+        if parent is None:
+            parent = self.content
+        card = tk.Frame(parent, bg='white', highlightthickness=1, highlightbackground='#E5E7EB', cursor='hand2')
         card.bind('<Button-1>', lambda e: self._show_resource_details(resource))
         
         # Card content
@@ -479,7 +497,7 @@ class BrowseResourcesPage(tk.Frame):
         name_label.bind('<Button-1>', lambda e: self._show_resource_details(resource))
         
         code = resource.get('code', resource.get('id', 'N/A'))
-        code_label = tk.Label(info_frame, text=f"Code: {code}", bg='white', fg='#6B7280', font=('Helvetica', 9))
+        code_label = tk.Label(info_frame, text=f"Code: {code}", bg='white', fg='#1F2937', font=('Helvetica', 9))
         code_label.pack(anchor='w', pady=(2, 0))
         code_label.bind('<Button-1>', lambda e: self._show_resource_details(resource))
         
@@ -512,7 +530,7 @@ class BrowseResourcesPage(tk.Frame):
         cap_frame.pack(side='left', padx=(0, 20))
         cap_frame.bind('<Button-1>', lambda e: self._show_resource_details(resource))
         
-        cap_label1 = tk.Label(cap_frame, text='Capacity', bg='#F9FAFB', fg='#6B7280', font=('Helvetica', 8))
+        cap_label1 = tk.Label(cap_frame, text='Capacity', bg='#F9FAFB', fg='#1F2937', font=('Helvetica', 8))
         cap_label1.pack()
         cap_label1.bind('<Button-1>', lambda e: self._show_resource_details(resource))
         
@@ -526,7 +544,7 @@ class BrowseResourcesPage(tk.Frame):
         loc_frame.pack(side='left')
         loc_frame.bind('<Button-1>', lambda e: self._show_resource_details(resource))
         
-        loc_label1 = tk.Label(loc_frame, text='Location', bg='#F9FAFB', fg='#6B7280', font=('Helvetica', 8))
+        loc_label1 = tk.Label(loc_frame, text='Location', bg='#F9FAFB', fg='#1F2937', font=('Helvetica', 8))
         loc_label1.pack()
         loc_label1.bind('<Button-1>', lambda e: self._show_resource_details(resource))
         
@@ -537,7 +555,7 @@ class BrowseResourcesPage(tk.Frame):
         # Amenities
         amenities = resource.get('amenities', [])
         if amenities:
-            amenities_label = tk.Label(content, text='Amenities:', bg='white', fg='#6B7280', font=('Helvetica', 9))
+            amenities_label = tk.Label(content, text='Amenities:', bg='white', fg='#1F2937', font=('Helvetica', 9))
             amenities_label.pack(anchor='w', pady=(0, 4))
             amenities_label.bind('<Button-1>', lambda e: self._show_resource_details(resource))
             
@@ -568,7 +586,7 @@ class BrowseResourcesPage(tk.Frame):
                 displayed += 1
             
             if len(amenities) > 6:
-                more_tag = tk.Label(amenities_frame, text=f'+{len(amenities) - 6} more', bg='#F3F4F6', fg='#6B7280', font=('Helvetica', 8), padx=6, pady=2)
+                more_tag = tk.Label(amenities_frame, text=f'+{len(amenities) - 6} more', bg='#F3F4F6', fg='#1F2937', font=('Helvetica', 8), padx=6, pady=2)
                 more_tag.pack(side='left', padx=(0, 4), pady=2)
                 more_tag.bind('<Button-1>', lambda e: self._show_resource_details(resource))
         
@@ -579,8 +597,14 @@ class BrowseResourcesPage(tk.Frame):
         check_btn = create_secondary_button(btn_frame, 'Check Availability', lambda: self._check_availability(resource), width=150, height=36)
         check_btn.pack(side='left', fill='x', expand=True, padx=(0, 6))
         
-        book_btn = create_primary_button(btn_frame, 'Book Now', lambda: self._book_resource(resource), width=110, height=36)
-        book_btn.pack(side='right', fill='x', expand=True, padx=(6, 0))
+        # Only show booking button for organizers and admins
+        if self.can_book:
+            book_btn = create_primary_button(btn_frame, 'Book Now', lambda: self._book_resource(resource), width=110, height=36)
+            book_btn.pack(side='right', fill='x', expand=True, padx=(6, 0))
+        else:
+            # Show disabled/info message for students
+            info_label = tk.Label(btn_frame, text='Booking available for organizers', bg='white', fg='#1F2937', font=('Helvetica', 9, 'italic'))
+            info_label.pack(side='right', padx=(6, 0))
         
         return card
 
@@ -659,7 +683,7 @@ class BrowseResourcesPage(tk.Frame):
         # Description
         description = resource.get('description', 'No description available')
         tk.Label(details_frame, text='Description', bg='white', fg='#1F2937', font=('Helvetica', 13, 'bold')).pack(anchor='w', pady=(0, 12))
-        tk.Label(details_frame, text=description, bg='white', fg='#6B7280', font=('Helvetica', 10), wraplength=620, justify='left').pack(anchor='w', pady=(0, 20))
+        tk.Label(details_frame, text=description, bg='white', fg='#1F2937', font=('Helvetica', 10), wraplength=620, justify='left').pack(anchor='w', pady=(0, 20))
         
         # Amenities
         amenities = resource.get('amenities', [])
@@ -673,7 +697,7 @@ class BrowseResourcesPage(tk.Frame):
                 amenity_row = tk.Frame(amenities_grid, bg='white')
                 amenity_row.pack(fill='x', pady=2)
                 tk.Label(amenity_row, text='✓', bg='white', fg=self.colors.get('success', '#27AE60'), font=('Helvetica', 12, 'bold')).pack(side='left', padx=(0, 8))
-                tk.Label(amenity_row, text=str(amenity).title(), bg='white', fg='#374151', font=('Helvetica', 10)).pack(side='left')
+                tk.Label(amenity_row, text=str(amenity).title(), bg='white', fg='#1F2937', font=('Helvetica', 10)).pack(side='left')
         
         # Action buttons
         btn_frame = tk.Frame(details_frame, bg='white')
@@ -681,14 +705,22 @@ class BrowseResourcesPage(tk.Frame):
         
         check_availability_btn = create_secondary_button(btn_frame, 'Check Availability', lambda: [modal.destroy(), self._check_availability(resource)], width=180, height=44)
         check_availability_btn.pack(side='left', fill='x', expand=True, padx=(0, 8))
-        book_this_btn = create_primary_button(btn_frame, 'Book This Resource', lambda: [modal.destroy(), self._book_resource(resource)], width=180, height=44)
-        book_this_btn.pack(side='right', fill='x', expand=True, padx=(8, 0))
+        
+        # Only show booking button for organizers and admins
+        if self.can_book:
+            book_this_btn = create_primary_button(btn_frame, 'Book This Resource', lambda: [modal.destroy(), self._book_resource(resource)], width=180, height=44)
+            book_this_btn.pack(side='right', fill='x', expand=True, padx=(8, 0))
+        else:
+            # Show info message for students
+            info_frame = tk.Frame(btn_frame, bg='#FEF3C7', highlightthickness=1, highlightbackground='#FCD34D')
+            info_frame.pack(side='right', fill='x', expand=True, padx=(8, 0))
+            tk.Label(info_frame, text='📋 Resource booking is available for event organizers', bg='#FEF3C7', fg='#1F2937', font=('Helvetica', 10)).pack(padx=12, pady=12)
 
     def _add_detail_item(self, parent, label, value):
         """Add a detail item to modal"""
         row = tk.Frame(parent, bg='#F9FAFB')
         row.pack(fill='x', pady=4)
-        tk.Label(row, text=label, bg='#F9FAFB', fg='#6B7280', font=('Helvetica', 10), width=15, anchor='w').pack(side='left')
+        tk.Label(row, text=label, bg='#F9FAFB', fg='#1F2937', font=('Helvetica', 10), width=15, anchor='w').pack(side='left')
         tk.Label(row, text=str(value), bg='#F9FAFB', fg='#1F2937', font=('Helvetica', 10, 'bold')).pack(side='left')
 
     def _check_availability(self, resource):

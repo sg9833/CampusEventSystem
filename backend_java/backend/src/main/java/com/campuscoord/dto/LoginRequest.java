@@ -4,9 +4,8 @@ import jakarta.validation.constraints.*;
 
 public class LoginRequest {
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email must be a valid email address")
-    private String email;
+    @NotBlank(message = "Email or Username is required")
+    private String email;  // This field can contain either email or username
     
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")

@@ -91,6 +91,8 @@ class OrganizerDashboard(tk.Frame):
         add_btn('Create Event', self._render_create_event, icon='➕')
         add_btn('My Events', self._render_my_events, icon='📋')
         add_btn('Event Registrations', self._render_event_registrations, icon='👥')
+        add_btn('Book Resources', self._render_book_resources, icon='📚')
+        add_btn('My Bookings', self._render_my_bookings, icon='📅')
         add_btn('Resource Requests', self._render_resource_requests, icon='📦')
         add_btn('Analytics', self._render_analytics, icon='📊')
         add_btn('Profile', self._render_profile, icon='⚙️')
@@ -114,11 +116,15 @@ class OrganizerDashboard(tk.Frame):
         welcome = tk.Label(top, text=f"Welcome, {user.get('username') or 'Organizer'}", bg='white', fg=colors.get('primary', '#2C3E50'), font=('Helvetica', 13, 'bold'))
         welcome.pack(side='left', padx=16)
 
-        # Search bar
+        # Search bar with explicit light mode colors
         search_frame = tk.Frame(top, bg='white')
         search_frame.pack(side='right', padx=16)
         self.search_var = tk.StringVar()
-        search_entry = tk.Entry(search_frame, textvariable=self.search_var)
+        search_entry = tk.Entry(search_frame, textvariable=self.search_var,
+                               bg='white', fg='#1F2937',  # White background, dark text
+                               insertbackground='#1F2937',  # Cursor color
+                               highlightthickness=1, highlightbackground='#D1D5DB',
+                               highlightcolor='#3B82F6')  # Blue focus border
         search_entry.pack(side='left')
         search_btn = create_primary_button(search_frame, 'Search', self._on_search, width=80, height=30)
         search_btn.pack(side='left', padx=(6, 0))
@@ -151,7 +157,22 @@ class OrganizerDashboard(tk.Frame):
         def worker():
             errors = []
             try:
-                self.my_events = self.api.get('events/my') or []
+                # Get ALL events from backend
+                all_events = self.api.get('events') or []
+                
+                # Filter to show only events created by this organizer
+                user_data = self.session.get_user()
+                user_id = user_data.get('id') or user_data.get('user_id') if user_data else None
+                
+                if user_id:
+                    # Filter events where organizer_id matches current user's ID
+                    # Backend returns 'organizerId' (camelCase) in Event model
+                    self.my_events = [
+                        event for event in all_events 
+                        if event.get('organizerId') == user_id or event.get('organizer_id') == user_id
+                    ]
+                else:
+                    self.my_events = []
             except Exception as e:
                 errors.append(('my_events', str(e)))
                 self.my_events = []
@@ -319,7 +340,8 @@ class OrganizerDashboard(tk.Frame):
         self._clear_content()
         colors = self.controller.colors
         
-        tk.Label(self.content, text='Create New Event', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
+        tk.Label(self.content, text='Create New Event', bg=self.controller.colors.get('background', '#ECF0F1'), 
+                fg='#1F2937', font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
         
         form_frame = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
         form_frame.pack(fill='both', expand=True, padx=16, pady=(0, 16))
@@ -328,34 +350,42 @@ class OrganizerDashboard(tk.Frame):
         form = tk.Frame(form_frame, bg='white')
         form.pack(padx=20, pady=20, fill='both', expand=True)
         
-        # Event Title
-        tk.Label(form, text='Event Title *', bg='white', fg='#374151', font=('Helvetica', 11, 'bold')).grid(row=0, column=0, sticky='w', pady=(0, 4))
-        title_entry = tk.Entry(form, width=50)
+        # Event Title with explicit light mode colors
+        tk.Label(form, text='Event Title *', bg='white', fg='#1F2937', font=('Helvetica', 11, 'bold')).grid(row=0, column=0, sticky='w', pady=(0, 4))
+        title_entry = tk.Entry(form, width=50, bg='white', fg='#1F2937', insertbackground='#1F2937',
+                              highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         title_entry.grid(row=1, column=0, sticky='ew', pady=(0, 12))
         
-        # Description
-        tk.Label(form, text='Description *', bg='white', fg='#374151', font=('Helvetica', 11, 'bold')).grid(row=2, column=0, sticky='w', pady=(0, 4))
-        desc_text = tk.Text(form, width=50, height=5)
+        # Description with explicit light mode colors
+        tk.Label(form, text='Description *', bg='white', fg='#1F2937', font=('Helvetica', 11, 'bold')).grid(row=2, column=0, sticky='w', pady=(0, 4))
+        desc_text = tk.Text(form, width=50, height=5, bg='white', fg='#1F2937', insertbackground='#1F2937',
+                           highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         desc_text.grid(row=3, column=0, sticky='ew', pady=(0, 12))
         
-        # Start Time
-        tk.Label(form, text='Start Time (YYYY-MM-DD HH:MM:SS) *', bg='white', fg='#374151', font=('Helvetica', 11, 'bold')).grid(row=4, column=0, sticky='w', pady=(0, 4))
-        start_entry = tk.Entry(form, width=50)
+        # Start Time with explicit light mode colors
+        tk.Label(form, text='Start Time (YYYY-MM-DD HH:MM:SS) *', bg='white', fg='#1F2937', font=('Helvetica', 11, 'bold')).grid(row=4, column=0, sticky='w', pady=(0, 4))
+        start_entry = tk.Entry(form, width=50, bg='white', fg='#1F2937', insertbackground='#1F2937',
+                              highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
+        start_entry.insert(0, '2025-10-20 09:00:00')  # Default placeholder
         start_entry.grid(row=5, column=0, sticky='ew', pady=(0, 12))
         
-        # End Time
-        tk.Label(form, text='End Time (YYYY-MM-DD HH:MM:SS) *', bg='white', fg='#374151', font=('Helvetica', 11, 'bold')).grid(row=6, column=0, sticky='w', pady=(0, 4))
-        end_entry = tk.Entry(form, width=50)
+        # End Time with explicit light mode colors
+        tk.Label(form, text='End Time (YYYY-MM-DD HH:MM:SS) *', bg='white', fg='#1F2937', font=('Helvetica', 11, 'bold')).grid(row=6, column=0, sticky='w', pady=(0, 4))
+        end_entry = tk.Entry(form, width=50, bg='white', fg='#1F2937', insertbackground='#1F2937',
+                            highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
+        end_entry.insert(0, '2025-10-20 17:00:00')  # Default placeholder
         end_entry.grid(row=7, column=0, sticky='ew', pady=(0, 12))
         
-        # Venue
-        tk.Label(form, text='Venue *', bg='white', fg='#374151', font=('Helvetica', 11, 'bold')).grid(row=8, column=0, sticky='w', pady=(0, 4))
-        venue_entry = tk.Entry(form, width=50)
+        # Venue with explicit light mode colors
+        tk.Label(form, text='Venue *', bg='white', fg='#1F2937', font=('Helvetica', 11, 'bold')).grid(row=8, column=0, sticky='w', pady=(0, 4))
+        venue_entry = tk.Entry(form, width=50, bg='white', fg='#1F2937', insertbackground='#1F2937',
+                              highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         venue_entry.grid(row=9, column=0, sticky='ew', pady=(0, 12))
         
-        # Capacity
-        tk.Label(form, text='Capacity', bg='white', fg='#374151', font=('Helvetica', 11, 'bold')).grid(row=10, column=0, sticky='w', pady=(0, 4))
-        capacity_entry = tk.Entry(form, width=50)
+        # Capacity with explicit light mode colors
+        tk.Label(form, text='Capacity', bg='white', fg='#1F2937', font=('Helvetica', 11, 'bold')).grid(row=10, column=0, sticky='w', pady=(0, 4))
+        capacity_entry = tk.Entry(form, width=50, bg='white', fg='#1F2937', insertbackground='#1F2937',
+                                 highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         capacity_entry.grid(row=11, column=0, sticky='ew', pady=(0, 12))
         
         form.grid_columnconfigure(0, weight=1)
@@ -373,20 +403,35 @@ class OrganizerDashboard(tk.Frame):
                 messagebox.showerror('Error', 'Please fill all required fields')
                 return
             
+            # Get current user's ID from session
+            user_data = self.session.get_user()
+            if not user_data:
+                messagebox.showerror('Error', 'User session not found. Please log in again.')
+                return
+            
+            # Get user ID - could be 'id' or 'user_id' depending on how session was set
+            user_id = user_data.get('id') or user_data.get('user_id')
+            if not user_id:
+                messagebox.showerror('Error', 'User ID not found in session. Please log in again.')
+                return
+            
+            # Convert datetime format: "YYYY-MM-DD HH:MM:SS" to "YYYY-MM-DDTHH:MM:SS" (ISO 8601)
+            # Replace space with 'T' for Java LocalDateTime
+            start_time_iso = start_time.replace(' ', 'T')
+            end_time_iso = end_time.replace(' ', 'T')
+            
+            # Build payload matching backend DTO (CreateEventRequest.java)
             payload = {
                 'title': title,
                 'description': description,
-                'start_time': start_time,
-                'end_time': end_time,
+                'organizerId': user_id,  # REQUIRED by backend
+                'startTime': start_time_iso,  # camelCase with ISO 8601 format
+                'endTime': end_time_iso,      # camelCase with ISO 8601 format
                 'venue': venue
             }
             
-            if capacity:
-                try:
-                    payload['capacity'] = int(capacity)
-                except ValueError:
-                    messagebox.showerror('Error', 'Capacity must be a number')
-                    return
+            # Note: capacity is NOT in CreateEventRequest.java DTO, so it won't be sent
+            # If you need capacity, update the backend DTO first
             
             try:
                 response = self.api.post('events', payload)
@@ -405,7 +450,26 @@ class OrganizerDashboard(tk.Frame):
 
     def _render_my_events(self):
         self._clear_content()
-        tk.Label(self.content, text='My Events', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
+        
+        # Header with event count
+        header_frame = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
+        header_frame.pack(fill='x', padx=16, pady=(16, 8))
+        
+        tk.Label(
+            header_frame, 
+            text='My Events', 
+            bg=self.controller.colors.get('background', '#ECF0F1'),
+            fg='#1F2937',  # Dark text for light mode visibility
+            font=('Helvetica', 14, 'bold')
+        ).pack(side='left')
+        
+        tk.Label(
+            header_frame, 
+            text=f'({len(self.my_events)} events)', 
+            bg=self.controller.colors.get('background', '#ECF0F1'), 
+            font=('Helvetica', 12),
+            fg='#6B7280'
+        ).pack(side='left', padx=(8, 0))
         
         if not self.my_events:
             no_events = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
@@ -418,7 +482,8 @@ class OrganizerDashboard(tk.Frame):
 
     def _render_event_registrations(self):
         self._clear_content()
-        tk.Label(self.content, text='Event Registrations', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
+        tk.Label(self.content, text='Event Registrations', bg=self.controller.colors.get('background', '#ECF0F1'), 
+                fg='#1F2937', font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
         
         # Show registrations grouped by event
         for event in self.my_events:
@@ -431,12 +496,13 @@ class OrganizerDashboard(tk.Frame):
             # Event header
             header = tk.Frame(event_frame, bg='#F9FAFB')
             header.pack(fill='x')
-            tk.Label(header, text=event.get('title', 'Untitled'), bg='#F9FAFB', fg='#374151', font=('Helvetica', 12, 'bold')).pack(side='left', padx=12, pady=8)
-            tk.Label(header, text=f'{len(registrations)} registrations', bg='#F9FAFB', fg='#6B7280').pack(side='right', padx=12, pady=8)
+            tk.Label(header, text=event.get('title', 'Untitled'), bg='#F9FAFB', fg='#1F2937', 
+                    font=('Helvetica', 12, 'bold')).pack(side='left', padx=12, pady=8)
+            tk.Label(header, text=f'{len(registrations)} registrations', bg='#F9FAFB', fg='#1F2937').pack(side='right', padx=12, pady=8)
             
             # Registrations list
             if not registrations:
-                tk.Label(event_frame, text='No registrations yet', bg='white', fg='#6B7280').pack(padx=12, pady=12)
+                tk.Label(event_frame, text='No registrations yet', bg='white', fg='#1F2937').pack(padx=12, pady=12)
             else:
                 for reg in registrations:
                     reg_row = tk.Frame(event_frame, bg='white')
@@ -446,24 +512,51 @@ class OrganizerDashboard(tk.Frame):
                     user_name = user_info.get('username') or user_info.get('email') or f"User {reg.get('user_id', 'N/A')}"
                     reg_date = reg.get('registered_at') or 'N/A'
                     
-                    tk.Label(reg_row, text='👤', bg='white').pack(side='left', padx=(0, 8))
-                    tk.Label(reg_row, text=user_name, bg='white', font=('Helvetica', 10, 'bold')).pack(side='left')
-                    tk.Label(reg_row, text=f'Registered: {reg_date}', bg='white', fg='#6B7280').pack(side='right')
+                    tk.Label(reg_row, text='👤', bg='white', fg='#1F2937').pack(side='left', padx=(0, 8))
+                    tk.Label(reg_row, text=user_name, bg='white', fg='#1F2937', 
+                            font=('Helvetica', 10, 'bold')).pack(side='left')
+                    tk.Label(reg_row, text=f'Registered: {reg_date}', bg='white', fg='#1F2937').pack(side='right')
+
+    def _render_book_resources(self):
+        """Navigate to browse resources page with booking functionality"""
+        self.controller.navigate('browse_resources')
+
+    def _render_my_bookings(self):
+        """Navigate to my bookings page"""
+        self.controller.navigate('my_bookings')
 
     def _render_resource_requests(self):
         self._clear_content()
-        tk.Label(self.content, text='Resource Requests', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
+        tk.Label(self.content, text='Resource Requests', bg=self.controller.colors.get('background', '#ECF0F1'), 
+                fg='#1F2937', font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
         
         if not self.resource_requests:
             no_requests = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
             no_requests.pack(fill='both', expand=True, padx=16, pady=(0, 16))
-            tk.Label(no_requests, text='No resource requests', bg='white', fg='#6B7280').pack(padx=12, pady=40)
+            tk.Label(no_requests, text='No resource requests', bg='white', fg='#1F2937').pack(padx=12, pady=40)
         else:
             table_frame = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
             table_frame.pack(fill='both', expand=True, padx=16, pady=(0, 16))
             
+            # Apply custom Treeview style for dark mode compatibility
+            style = ttk.Style()
+            style.theme_use('clam')
+            style.configure('Requests.Treeview',
+                          background='white',
+                          foreground='#1F2937',
+                          fieldbackground='white',
+                          borderwidth=0)
+            style.configure('Requests.Treeview.Heading',
+                          background='#F9FAFB',
+                          foreground='#1F2937',
+                          borderwidth=1,
+                          relief='solid')
+            style.map('Requests.Treeview',
+                     background=[('selected', '#3B82F6')],
+                     foreground=[('selected', 'white')])
+            
             cols = ('id', 'resource', 'start_time', 'end_time', 'status')
-            tv = ttk.Treeview(table_frame, columns=cols, show='headings')
+            tv = ttk.Treeview(table_frame, columns=cols, show='headings', style='Requests.Treeview')
             for c in cols:
                 tv.heading(c, text=c.replace('_', ' ').title())
                 tv.column(c, width=140)
@@ -475,7 +568,8 @@ class OrganizerDashboard(tk.Frame):
         self._clear_content()
         colors = self.controller.colors
         
-        tk.Label(self.content, text='Analytics', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
+        tk.Label(self.content, text='Analytics', bg=self.controller.colors.get('background', '#ECF0F1'), 
+                fg='#1F2937', font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
         
         analytics_frame = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
         analytics_frame.pack(fill='both', expand=True, padx=16, pady=(0, 16))
@@ -488,14 +582,15 @@ class OrganizerDashboard(tk.Frame):
         stats_container = tk.Frame(analytics_frame, bg='white')
         stats_container.pack(padx=20, pady=20, fill='x')
         
-        tk.Label(stats_container, text='Overview Statistics', bg='white', fg='#374151', font=('Helvetica', 13, 'bold')).pack(anchor='w', pady=(0, 16))
+        tk.Label(stats_container, text='Overview Statistics', bg='white', fg='#1F2937', 
+                font=('Helvetica', 13, 'bold')).pack(anchor='w', pady=(0, 16))
         
         # Stats rows
         def stat_row(label, value):
             row = tk.Frame(stats_container, bg='white')
             row.pack(fill='x', pady=6)
-            tk.Label(row, text=label, bg='white', fg='#6B7280', font=('Helvetica', 11)).pack(side='left')
-            tk.Label(row, text=str(value), bg='white', fg=colors.get('primary', '#2C3E50'), font=('Helvetica', 11, 'bold')).pack(side='right')
+            tk.Label(row, text=label, bg='white', fg='#1F2937', font=('Helvetica', 11)).pack(side='left')
+            tk.Label(row, text=str(value), bg='white', fg='#1F2937', font=('Helvetica', 11, 'bold')).pack(side='right')
         
         stat_row('Total Events Created:', total_events)
         stat_row('Total Registrations:', total_registrations)
@@ -505,11 +600,13 @@ class OrganizerDashboard(tk.Frame):
         # Chart placeholder
         chart_frame = tk.Frame(analytics_frame, bg='#F9FAFB')
         chart_frame.pack(fill='both', expand=True, padx=20, pady=(12, 20))
-        tk.Label(chart_frame, text='📊 Chart visualization would go here', bg='#F9FAFB', fg='#6B7280', font=('Helvetica', 12)).pack(pady=40)
+        tk.Label(chart_frame, text='📊 Chart visualization would go here', bg='#F9FAFB', 
+                fg='#1F2937', font=('Helvetica', 12)).pack(pady=40)
 
     def _render_profile(self):
         self._clear_content()
-        tk.Label(self.content, text='Profile Settings', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
+        tk.Label(self.content, text='Profile Settings', bg=self.controller.colors.get('background', '#ECF0F1'), 
+                fg='#1F2937', font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
         
         profile_frame = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
         profile_frame.pack(fill='both', expand=True, padx=16, pady=(0, 16))
@@ -520,57 +617,100 @@ class OrganizerDashboard(tk.Frame):
         info_container.pack(padx=20, pady=20)
         
         tk.Label(info_container, text='👔', bg='white', font=('Helvetica', 48)).pack(pady=(0, 16))
-        tk.Label(info_container, text=user.get('username', 'N/A'), bg='white', font=('Helvetica', 16, 'bold')).pack()
-        tk.Label(info_container, text=user.get('email', 'N/A'), bg='white', fg='#6B7280').pack(pady=(4, 0))
-        tk.Label(info_container, text=f"Role: {(self.session.get_role() or 'ORGANIZER').title()}", bg='white', fg='#6B7280').pack(pady=(4, 16))
+        tk.Label(info_container, text=user.get('username', 'N/A'), bg='white', fg='#1F2937', 
+                font=('Helvetica', 16, 'bold')).pack()
+        tk.Label(info_container, text=user.get('email', 'N/A'), bg='white', fg='#1F2937').pack(pady=(4, 0))
+        tk.Label(info_container, text=f"Role: {(self.session.get_role() or 'ORGANIZER').title()}", 
+                bg='white', fg='#1F2937').pack(pady=(4, 16))
         
-        tk.Label(info_container, text='Profile editing coming soon', bg='white', fg='#9CA3AF').pack(pady=(8, 0))
+        tk.Label(info_container, text='Profile editing coming soon', bg='white', fg='#1F2937').pack(pady=(8, 0))
 
     def _render_events_table(self, events, show_actions=False):
-        cols = ['title', 'start_time', 'venue', 'status']
-        if show_actions:
-            cols.append('actions')
-            
+        """Render events table using simple Treeview"""
+        
+        # Simple container
         frame = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
         frame.pack(fill='both', expand=True, padx=16, pady=(0, 16))
-
-        # Header row
-        header = tk.Frame(frame, bg='#F9FAFB')
-        header.pack(fill='x')
-        headers = ['Title', 'Start Time', 'Venue', 'Status']
-        if show_actions:
-            headers.append('Actions')
-        for i, h in enumerate(headers):
-            tk.Label(header, text=h, bg='#F9FAFB', fg='#374151', font=('Helvetica', 10, 'bold')).grid(row=0, column=i, sticky='w', padx=8, pady=8)
-            header.grid_columnconfigure(i, weight=1 if i == 0 else 0)
-
-        # Rows
+        
+        # NO EVENTS
         if not events:
             tk.Label(frame, text='No events', bg='white', fg='#6B7280').pack(padx=12, pady=12)
-        else:
-            for e in events:
-                row = tk.Frame(frame, bg='white')
-                row.pack(fill='x', padx=4, pady=2)
-                
-                status = (e.get('status') or 'pending').title()
-                status_colors = {
-                    'Approved': '#27AE60',
-                    'Pending': '#F39C12',
-                    'Rejected': '#E74C3C'
-                }
-                status_color = status_colors.get(status, '#6B7280')
-                
-                tk.Label(row, text=e.get('title') or 'Untitled', bg='white').grid(row=0, column=0, sticky='w', padx=8, pady=8)
-                tk.Label(row, text=e.get('start_time') or '', bg='white', fg='#6B7280').grid(row=0, column=1, sticky='w', padx=8)
-                tk.Label(row, text=e.get('venue') or '', bg='white', fg='#6B7280').grid(row=0, column=2, sticky='w', padx=8)
-                tk.Label(row, text=status, bg='white', fg=status_color, font=('Helvetica', 10, 'bold')).grid(row=0, column=3, sticky='w', padx=8)
-                
-                if show_actions:
-                    event_id = e.get('id')
-                    reg_count = len(self.event_registrations.get(event_id, []))
-                    view_btn = create_primary_button(row, f'View ({reg_count})', lambda eid=event_id: self._show_event_details(eid), width=90, height=30)
-                    view_btn.grid(row=0, column=4, padx=8)
-
+            return
+        
+        # Configure Treeview style for light mode (override dark mode)
+        style = ttk.Style()
+        style.theme_use('clam')  # Use 'clam' theme for better customization
+        
+        # Configure colors to ensure light mode visibility
+        style.configure('Events.Treeview',
+                       background='white',
+                       foreground='#1F2937',  # Dark gray text
+                       fieldbackground='white',
+                       rowheight=28)
+        
+        style.configure('Events.Treeview.Heading',
+                       background='#F3F4F6',  # Light gray header
+                       foreground='#1F2937',  # Dark gray text
+                       font=('Helvetica', 10, 'bold'))
+        
+        # Hover effect
+        style.map('Events.Treeview',
+                 background=[('selected', '#3B82F6')],  # Blue when selected
+                 foreground=[('selected', 'white')])
+        
+        # SIMPLE TREEVIEW
+        cols = ('id', 'title', 'start', 'end', 'venue', 'status')
+        tree = ttk.Treeview(frame, columns=cols, show='headings', height=15, style='Events.Treeview')
+        
+        tree.heading('id', text='ID')
+        tree.heading('title', text='Title')
+        tree.heading('start', text='Start')
+        tree.heading('end', text='End')
+        tree.heading('venue', text='Venue')
+        tree.heading('status', text='Status')
+        
+        tree.column('id', width=50)
+        tree.column('title', width=250)
+        tree.column('start', width=150)
+        tree.column('end', width=150)
+        tree.column('venue', width=120)
+        tree.column('status', width=100)
+        
+        # Insert data
+        for e in events:
+            tree.insert('', 'end', values=(
+                e.get('id', ''),
+                e.get('title', 'Untitled'),
+                e.get('startTime', e.get('start_time', '')),
+                e.get('endTime', e.get('end_time', '')),
+                e.get('venue', ''),
+                e.get('status', 'pending')
+            ))
+        
+        # Scrollbar
+        scroll = ttk.Scrollbar(frame, orient='vertical', command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        
+        tree.pack(side='left', fill='both', expand=True, padx=4, pady=4)
+        scroll.pack(side='right', fill='y', pady=4)
+        
+        # Actions
+        if show_actions:
+            btn_frame = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
+            btn_frame.pack(fill='x', padx=16, pady=8)
+            
+            def get_selected():
+                sel = tree.selection()
+                if not sel:
+                    messagebox.showwarning('No Selection', 'Select an event first')
+                    return None
+                vals = tree.item(sel[0], 'values')
+                return int(vals[0]) if vals else None
+            
+            create_primary_button(btn_frame, '📋 View', lambda: self._show_event_details(get_selected()) if get_selected() else None, 100, 36).pack(side='left', padx=5)
+            create_secondary_button(btn_frame, '✏️ Edit', lambda: self._edit_event(get_selected()) if get_selected() else None, 90, 36).pack(side='left', padx=5)
+            create_danger_button(btn_frame, '🗑️ Delete', lambda: self._delete_event(get_selected()) if get_selected() else None, 100, 36).pack(side='left', padx=5)
+    
     def _show_event_details(self, event_id):
         """Show detailed view of a specific event"""
         event = next((e for e in self.my_events if e.get('id') == event_id), None)
@@ -590,12 +730,90 @@ class OrganizerDashboard(tk.Frame):
         
         messagebox.showinfo('Event Details', details)
 
+    def _edit_event(self, event_id):
+        """Edit an existing event"""
+        event = next((e for e in self.my_events if e.get('id') == event_id), None)
+        if not event:
+            messagebox.showerror('Error', 'Event not found')
+            return
+        
+        messagebox.showinfo(
+            'Edit Event',
+            f"Edit functionality for '{event.get('title')}' coming soon!\n\n"
+            f"This will allow you to modify:\n"
+            f"• Event title and description\n"
+            f"• Date and time\n"
+            f"• Venue\n"
+            f"• Event status"
+        )
+
+    def _delete_event(self, event_id):
+        """Delete an event with confirmation"""
+        event = next((e for e in self.my_events if e.get('id') == event_id), None)
+        if not event:
+            messagebox.showerror('Error', 'Event not found')
+            return
+        
+        # Confirmation dialog
+        confirm = messagebox.askyesno(
+            'Confirm Delete',
+            f"Are you sure you want to delete this event?\n\n"
+            f"Event: {event.get('title', 'Untitled')}\n"
+            f"Venue: {event.get('venue', 'N/A')}\n"
+            f"Start: {event.get('startTime') or event.get('start_time', 'N/A')}\n\n"
+            f"⚠️ This action cannot be undone!"
+        )
+        
+        if not confirm:
+            return
+        
+        try:
+            # Call DELETE endpoint
+            self.api.delete(f'events/{event_id}')
+            messagebox.showinfo('Success', f"Event '{event.get('title')}' has been deleted successfully!")
+            
+            # Reload events
+            self._load_all_data_then(self._render_my_events)
+            
+        except Exception as e:
+            error_msg = str(e).lower()
+            
+            # Check error type
+            if '405' in error_msg or 'method not allowed' in error_msg or '404' in error_msg:
+                # Backend doesn't have DELETE endpoint
+                messagebox.showwarning(
+                    'Feature Not Available',
+                    '❌ Delete endpoint not implemented in backend yet!\n\n'
+                    '📋 To enable delete functionality:\n\n'
+                    '1. Add to EventController.java:\n'
+                    '   @DeleteMapping("/{id}")\n'
+                    '   public ResponseEntity<?> deleteEvent(@PathVariable int id) {\n'
+                    '       eventDao.delete(id);\n'
+                    '       return ResponseEntity.ok(\n'
+                    '           Map.of("message", "Event deleted"));\n'
+                    '   }\n\n'
+                    '2. Add to EventDao.java:\n'
+                    '   public void delete(int id) {\n'
+                    '       jdbc.update("DELETE FROM events WHERE id = ?", id);\n'
+                    '   }\n\n'
+                    '3. Restart backend\n\n'
+                    'See BACKEND_DELETE_IMPLEMENTATION.md for full code.'
+                )
+            elif '403' in error_msg or 'forbidden' in error_msg:
+                messagebox.showerror(
+                    'Permission Denied',
+                    'You do not have permission to delete this event.\n\n'
+                    'Only the event organizer or admin can delete events.'
+                )
+            else:
+                messagebox.showerror('Error', f'Failed to delete event:\n\n{str(e)}')
+
     # Actions
     def _logout(self):
         try:
             self.session.clear_session()
         finally:
-            self.controller.show_page('LoginPage')
+            self.controller.navigate('login', add_to_history=False)
 
     def _on_search(self):
         q = (self.search_var.get() or '').lower().strip()

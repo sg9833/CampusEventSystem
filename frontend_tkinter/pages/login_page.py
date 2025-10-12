@@ -107,7 +107,7 @@ class LoginPage(tk.Frame):
         # === USERNAME SECTION ===
         self.username_label = tk.Label(
             self.lgn_frame,
-            text="Username",
+            text="Email or Username",
             bg="#040405",
             fg="#4f4e4d",
             font=("yu gothic ui", 13, "bold")

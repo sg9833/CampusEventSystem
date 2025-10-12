@@ -44,26 +44,9 @@ from utils.accessibility import (
 from utils.performance import get_cache, get_lazy_loader, get_performance_monitor
 from utils.loading_indicators import LoadingOverlay
 
-# Import all pages
-from pages.login_page import LoginPage
-from pages.register_page import RegisterPage
-from pages.student_dashboard import StudentDashboard
-from pages.organizer_dashboard import OrganizerDashboard
-from pages.admin_dashboard import AdminDashboard
-from pages.browse_events import BrowseEventsPage
-from pages.browse_resources import BrowseResourcesPage
-from pages.create_event import CreateEventPage
-from pages.event_details_modal import EventDetailsModal
-from pages.my_events import MyEventsPage
-from pages.my_bookings import MyBookingsPage
-from pages.book_resource import BookResourcePage
-from pages.event_approvals import EventApprovalsPage
-from pages.booking_approvals import BookingApprovalsPage
-from pages.manage_resources import ManageResourcesPage
-from pages.manage_users import ManageUsersPage
-from pages.analytics_page import AnalyticsPage
-from pages.notifications_page import NotificationsPage
-from pages.profile_page import ProfilePage
+# NOTE: Page modules can be heavy (PIL, tkcalendar). They are imported lazily inside
+# _initialize_pages to allow importing this module for testing without requiring
+# all UI dependencies to be present.
 
 
 class GlobalState:
@@ -120,7 +103,9 @@ class GlobalState:
             'theme': 'light',
             'font_scale': 1.0,
             'notifications_enabled': True,
-            'auto_refresh': True
+            'auto_refresh': True,
+            # runtime toggle for modern login page (can be changed in Settings)
+            'use_modern_login': False
         }
     
     def save_preferences(self):
@@ -659,29 +644,62 @@ class CampusEventApp(tk.Tk):
             }
         }
         
-        # Create pages (lazy loaded)
+        # Create page_classes mapping with lazy imports. If a page module
+        # cannot be imported (missing deps), we set the mapping to None and
+        # defer instantiation until later; error will be shown when trying to
+        # navigate to that page.
+        def try_import(module_path: str, symbol: str):
+            try:
+                mod = __import__(module_path, fromlist=[symbol])
+                return getattr(mod, symbol)
+            except Exception as e:
+                print(f"[PAGES] Warning: could not import {module_path}.{symbol}: {e}")
+                return None
+
+        # Determine login class using runtime preference or fallback to config
+        use_modern_pref = self.app_state.preferences.get('use_modern_login', None)
+        login_class = None
+        if use_modern_pref is not None:
+            if use_modern_pref:
+                login_class = try_import('pages.login_page_modern', 'LoginPageModern')
+            else:
+                login_class = try_import('pages.login_page', 'LoginPage')
+        else:
+            cfg_use = False
+            try:
+                from config import USE_MODERN_LOGIN as CFG_USE_MODERN
+                cfg_use = bool(CFG_USE_MODERN)
+            except Exception:
+                cfg_use = False
+
+            if cfg_use:
+                login_class = try_import('pages.login_page_modern', 'LoginPageModern')
+            else:
+                login_class = try_import('pages.login_page', 'LoginPage')
+
         self.page_classes = {
-            'login': LoginPage,
-            'register': RegisterPage,
-            'student_dashboard': StudentDashboard,
-            'organizer_dashboard': OrganizerDashboard,
-            'admin_dashboard': AdminDashboard,
-            'browse_events': BrowseEventsPage,
-            'browse_resources': BrowseResourcesPage,
-            'create_event': CreateEventPage,
-            'my_events': MyEventsPage,
-            'my_bookings': MyBookingsPage,
-            'book_resource': BookResourcePage,
-            'event_approvals': EventApprovalsPage,
-            'booking_approvals': BookingApprovalsPage,
-            'manage_resources': ManageResourcesPage,
-            'manage_users': ManageUsersPage,
-            'analytics': AnalyticsPage,
-            'notifications': NotificationsPage,
-            'profile': ProfilePage
+            'login': login_class,
+            'register': try_import('pages.register_page', 'RegisterPage'),
+            'student_dashboard': try_import('pages.student_dashboard', 'StudentDashboard'),
+            'organizer_dashboard': try_import('pages.organizer_dashboard', 'OrganizerDashboard'),
+            'admin_dashboard': try_import('pages.admin_dashboard', 'AdminDashboard'),
+            'browse_events': try_import('pages.browse_events', 'BrowseEventsPage'),
+            'browse_resources': try_import('pages.browse_resources', 'BrowseResourcesPage'),
+            'create_event': try_import('pages.create_event', 'CreateEventPage'),
+            'my_events': try_import('pages.my_events', 'MyEventsPage'),
+            'my_bookings': try_import('pages.my_bookings', 'MyBookingsPage'),
+            'book_resource': try_import('pages.book_resource', 'BookResourcePage'),
+            'event_approvals': try_import('pages.event_approvals', 'EventApprovalsPage'),
+            'booking_approvals': try_import('pages.booking_approvals', 'BookingApprovalsPage'),
+            'manage_resources': try_import('pages.manage_resources', 'ManageResourcesPage'),
+            'manage_users': try_import('pages.manage_users', 'ManageUsersPage'),
+            'analytics': try_import('pages.analytics_page', 'AnalyticsPage'),
+            'notifications': try_import('pages.notifications_page', 'NotificationsPage'),
+            'profile': try_import('pages.profile_page', 'ProfilePage')
         }
-        
-        print(f"[PAGES] Registered {len(self.page_classes)} page classes")
+
+        registered = sum(1 for v in self.page_classes.values() if v is not None)
+        print(f"[PAGES] Registered {registered}/{len(self.page_classes)} page classes (lazy)")
     
     def _get_or_create_page(self, page_name: str) -> Optional[tk.Frame]:
         """Get existing page or create new one (lazy loading)."""
@@ -867,11 +885,29 @@ class CampusEventApp(tk.Tk):
             variable=notif_enabled_var,
             font=("Arial", 11)
         ).pack(anchor='w', padx=40, pady=5)
+
+        # Modern login runtime toggle
+        modern_login_var = tk.BooleanVar(
+            value=self.app_state.preferences.get('use_modern_login', False)
+        )
+        tk.Checkbutton(
+            settings_window,
+            text="Use modern login page (no restart required)",
+            variable=modern_login_var,
+            font=("Arial", 11)
+        ).pack(anchor='w', padx=40, pady=5)
         
         # Save button
         def save_settings():
             self.app_state.preferences['auto_refresh'] = auto_refresh_var.get()
             self.app_state.preferences['notifications_enabled'] = notif_enabled_var.get()
+            # Modern login runtime toggle
+            self.app_state.preferences['use_modern_login'] = modern_login_var.get()
+            # Apply login preference immediately so testers don't need to restart
+            try:
+                self._apply_login_preference(modern_login_var.get())
+            except Exception as e:
+                print(f"[SETTINGS] Failed to apply login preference: {e}")
             self.app_state.save_preferences()
             messagebox.showinfo("Settings", "Settings saved successfully")
             settings_window.destroy()
@@ -888,6 +924,30 @@ class CampusEventApp(tk.Tk):
         ).pack(pady=20)
         
         self.keyboard_nav.push_modal(settings_window)
+
+    def _apply_login_preference(self, use_modern: bool):
+        """Apply the runtime preference for which login page class to use.
+
+        This updates the page_classes mapping so subsequent navigations
+        will instantiate the selected login implementation.
+        """
+        try:
+            if use_modern:
+                from pages.login_page_modern import LoginPageModern
+                login_class = LoginPageModern
+            else:
+                login_class = LoginPage
+
+            # Update mapping
+            if hasattr(self, 'page_classes'):
+                self.page_classes['login'] = login_class
+                print(f"[PAGES] Applied runtime login preference: {'modern' if use_modern else 'legacy'}")
+            else:
+                # If pages not initialized yet, ensure preferences will be used on init
+                self.app_state.preferences['use_modern_login'] = use_modern
+
+        except Exception as e:
+            print(f"[PAGES] Error applying login preference: {e}")
     
     def _logout(self):
         """Logout user."""

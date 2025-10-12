@@ -76,8 +76,8 @@ class CreateEventPage(tk.Frame):
         container = tk.Frame(header, bg='white')
         container.pack(fill='both', expand=True, padx=30, pady=15)
         
-        # Title
-        tk.Label(container, text='Create New Event', bg='white', fg=self.colors.get('primary', '#2C3E50'), font=('Helvetica', 20, 'bold')).pack(side='left')
+        # Title with explicit dark text color for light mode visibility
+        tk.Label(container, text='Create New Event', bg='white', fg='#1F2937', font=('Helvetica', 20, 'bold')).pack(side='left')
         
         # Save draft button
         tk.Button(container, text='💾 Save as Draft', command=self._save_draft, bg='#6B7280', fg='white', relief='flat', font=('Helvetica', 10), padx=16, pady=8).pack(side='right')
@@ -212,11 +212,13 @@ class CreateEventPage(tk.Frame):
         container = tk.Frame(self.content, bg='white')
         container.pack(fill='both', expand=True, padx=40, pady=30)
         
-        tk.Label(container, text='Step 1: Basic Details', bg='white', fg=self.colors.get('primary', '#2C3E50'), font=('Helvetica', 16, 'bold')).pack(anchor='w', pady=(0, 20))
+        tk.Label(container, text='Step 1: Basic Details', bg='white', fg='#1F2937', font=('Helvetica', 16, 'bold')).pack(anchor='w', pady=(0, 20))
         
-        # Event name
+        # Event name with explicit light mode colors
         self._create_label(container, 'Event Name *', 'Required')
-        entry = tk.Entry(container, textvariable=self.form_data['title'], font=('Helvetica', 11), width=60)
+        entry = tk.Entry(container, textvariable=self.form_data['title'], font=('Helvetica', 11), width=60,
+                        bg='white', fg='#1F2937', insertbackground='#1F2937',
+                        highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         entry.pack(anchor='w', pady=(0, 16), ipady=6)
         
         # Category
@@ -233,13 +235,15 @@ class CreateEventPage(tk.Frame):
         tk.Radiobutton(type_frame, text='Offline (In-person)', variable=self.form_data['event_type'], value='Offline', bg='white', font=('Helvetica', 11), selectcolor='white').pack(side='left', padx=(0, 20))
         tk.Radiobutton(type_frame, text='Online (Virtual)', variable=self.form_data['event_type'], value='Online', bg='white', font=('Helvetica', 11), selectcolor='white').pack(side='left')
         
-        # Description
+        # Description with explicit light mode colors
         self._create_label(container, 'Description *', 'Provide detailed event description')
         desc_frame = tk.Frame(container, bg='white', highlightthickness=1, highlightbackground='#D1D5DB')
         desc_frame.pack(anchor='w', pady=(0, 16))
         
         desc_scroll = ttk.Scrollbar(desc_frame, orient='vertical')
-        desc_text = tk.Text(desc_frame, height=8, width=58, font=('Helvetica', 11), yscrollcommand=desc_scroll.set, wrap='word')
+        desc_text = tk.Text(desc_frame, height=8, width=58, font=('Helvetica', 11), yscrollcommand=desc_scroll.set, wrap='word',
+                           bg='white', fg='#1F2937', insertbackground='#1F2937',
+                           highlightthickness=0)
         desc_scroll.config(command=desc_text.yview)
         desc_scroll.pack(side='right', fill='y')
         desc_text.pack(side='left', fill='both', expand=True)
@@ -258,7 +262,7 @@ class CreateEventPage(tk.Frame):
         container = tk.Frame(self.content, bg='white')
         container.pack(fill='both', expand=True, padx=40, pady=30)
         
-        tk.Label(container, text='Step 2: Schedule & Venue', bg='white', fg=self.colors.get('primary', '#2C3E50'), font=('Helvetica', 16, 'bold')).pack(anchor='w', pady=(0, 20))
+        tk.Label(container, text='Step 2: Schedule & Venue', bg='white', fg='#1F2937', font=('Helvetica', 16, 'bold')).pack(anchor='w', pady=(0, 20))
         
         # Two-column layout
         columns = tk.Frame(container, bg='white')
@@ -270,9 +274,11 @@ class CreateEventPage(tk.Frame):
         left = tk.Frame(columns, bg='white')
         left.grid(row=0, column=0, sticky='nsew', padx=(0, 16))
         
-        # Event date
+        # Event date with explicit light mode colors
         self._create_label(left, 'Event Date *', 'Format: YYYY-MM-DD (must be future date)')
-        date_entry = tk.Entry(left, textvariable=self.form_data['event_date'], font=('Helvetica', 11), width=25)
+        date_entry = tk.Entry(left, textvariable=self.form_data['event_date'], font=('Helvetica', 11), width=25,
+                             bg='white', fg='#1F2937', insertbackground='#1F2937',
+                             highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         date_entry.pack(anchor='w', pady=(0, 16), ipady=6)
         
         # Suggest today's date + 7 days as placeholder
@@ -280,16 +286,20 @@ class CreateEventPage(tk.Frame):
             suggested_date = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
             date_entry.insert(0, suggested_date)
         
-        # Start time
+        # Start time with explicit light mode colors
         self._create_label(left, 'Start Time *', 'Format: HH:MM (24-hour)')
-        start_entry = tk.Entry(left, textvariable=self.form_data['start_time'], font=('Helvetica', 11), width=25)
+        start_entry = tk.Entry(left, textvariable=self.form_data['start_time'], font=('Helvetica', 11), width=25,
+                              bg='white', fg='#1F2937', insertbackground='#1F2937',
+                              highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         start_entry.pack(anchor='w', pady=(0, 16), ipady=6)
         if not self.form_data['start_time'].get():
             start_entry.insert(0, '09:00')
         
-        # End time
+        # End time with explicit light mode colors
         self._create_label(left, 'End Time *', 'Format: HH:MM (24-hour)')
-        end_entry = tk.Entry(left, textvariable=self.form_data['end_time'], font=('Helvetica', 11), width=25)
+        end_entry = tk.Entry(left, textvariable=self.form_data['end_time'], font=('Helvetica', 11), width=25,
+                            bg='white', fg='#1F2937', insertbackground='#1F2937',
+                            highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         end_entry.pack(anchor='w', pady=(0, 16), ipady=6)
         if not self.form_data['end_time'].get():
             end_entry.insert(0, '17:00')
@@ -298,28 +308,36 @@ class CreateEventPage(tk.Frame):
         right = tk.Frame(columns, bg='white')
         right.grid(row=0, column=1, sticky='nsew', padx=(16, 0))
         
-        # Expected attendees
+        # Expected attendees with explicit light mode colors
         self._create_label(right, 'Expected Attendees', 'Estimated number of participants')
-        attendees_entry = tk.Entry(right, textvariable=self.form_data['expected_attendees'], font=('Helvetica', 11), width=25)
+        attendees_entry = tk.Entry(right, textvariable=self.form_data['expected_attendees'], font=('Helvetica', 11), width=25,
+                                   bg='white', fg='#1F2937', insertbackground='#1F2937',
+                                   highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         attendees_entry.pack(anchor='w', pady=(0, 16), ipady=6)
         
-        # Registration deadline
+        # Registration deadline with explicit light mode colors
         self._create_label(right, 'Registration Deadline', 'Format: YYYY-MM-DD HH:MM')
-        deadline_entry = tk.Entry(right, textvariable=self.form_data['registration_deadline'], font=('Helvetica', 11), width=25)
+        deadline_entry = tk.Entry(right, textvariable=self.form_data['registration_deadline'], font=('Helvetica', 11), width=25,
+                                 bg='white', fg='#1F2937', insertbackground='#1F2937',
+                                 highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
         deadline_entry.pack(anchor='w', pady=(0, 16), ipady=6)
         
         # Conditional fields based on event type
         event_type = self.form_data['event_type'].get()
         
         if event_type == 'Offline':
-            # Venue
+            # Venue with explicit light mode colors
             self._create_label(container, 'Venue/Location *', 'Physical location for the event')
-            venue_entry = tk.Entry(container, textvariable=self.form_data['venue'], font=('Helvetica', 11), width=60)
+            venue_entry = tk.Entry(container, textvariable=self.form_data['venue'], font=('Helvetica', 11), width=60,
+                                  bg='white', fg='#1F2937', insertbackground='#1F2937',
+                                  highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
             venue_entry.pack(anchor='w', pady=(0, 16), ipady=6)
         else:
-            # Meeting link
+            # Meeting link with explicit light mode colors
             self._create_label(container, 'Meeting Link *', 'Online meeting URL (Zoom, Teams, etc.)')
-            link_entry = tk.Entry(container, textvariable=self.form_data['meeting_link'], font=('Helvetica', 11), width=60)
+            link_entry = tk.Entry(container, textvariable=self.form_data['meeting_link'], font=('Helvetica', 11), width=60,
+                                 bg='white', fg='#1F2937', insertbackground='#1F2937',
+                                 highlightthickness=1, highlightbackground='#D1D5DB', highlightcolor='#3B82F6')
             link_entry.pack(anchor='w', pady=(0, 16), ipady=6)
         
         # Help text
@@ -332,7 +350,7 @@ class CreateEventPage(tk.Frame):
         container = tk.Frame(self.content, bg='white')
         container.pack(fill='both', expand=True, padx=40, pady=30)
         
-        tk.Label(container, text='Step 3: Resource Requirements & Review', bg='white', fg=self.colors.get('primary', '#2C3E50'), font=('Helvetica', 16, 'bold')).pack(anchor='w', pady=(0, 20))
+        tk.Label(container, text='Step 3: Resource Requirements & Review', bg='white', fg='#1F2937', font=('Helvetica', 16, 'bold')).pack(anchor='w', pady=(0, 20))
         
         # Resource requirements
         self._create_label(container, 'Resource Requirements', 'Select resources needed for your event')
@@ -370,14 +388,16 @@ class CreateEventPage(tk.Frame):
             cb = tk.Checkbutton(resources_grid, text=label, variable=var, bg='#F9FAFB', font=('Helvetica', 10), selectcolor='white')
             cb.grid(row=row, column=col, sticky='w', padx=10, pady=6)
         
-        # Additional requirements
+        # Additional requirements with explicit light mode colors
         self._create_label(container, 'Additional Requirements', 'Specify any other requirements or special arrangements')
         
         req_frame = tk.Frame(container, bg='white', highlightthickness=1, highlightbackground='#D1D5DB')
         req_frame.pack(anchor='w', pady=(0, 20))
         
         req_scroll = ttk.Scrollbar(req_frame, orient='vertical')
-        req_text = tk.Text(req_frame, height=6, width=75, font=('Helvetica', 11), yscrollcommand=req_scroll.set, wrap='word')
+        req_text = tk.Text(req_frame, height=6, width=75, font=('Helvetica', 11), yscrollcommand=req_scroll.set, wrap='word',
+                          bg='white', fg='#1F2937', insertbackground='#1F2937',
+                          highlightthickness=0)
         req_scroll.config(command=req_text.yview)
         req_scroll.pack(side='right', fill='y')
         req_text.pack(side='left', fill='both', expand=True)
@@ -391,8 +411,8 @@ class CreateEventPage(tk.Frame):
         
         self.form_data['additional_requirements'] = req_text
         
-        # Review section
-        review_label = tk.Label(container, text='Review Your Event', bg='white', fg=self.colors.get('primary', '#2C3E50'), font=('Helvetica', 14, 'bold'))
+        # Review section with explicit dark text color
+        review_label = tk.Label(container, text='Review Your Event', bg='white', fg='#1F2937', font=('Helvetica', 14, 'bold'))
         review_label.pack(anchor='w', pady=(20, 12))
         
         review_frame = tk.Frame(container, bg='#F9FAFB', highlightthickness=1, highlightbackground='#E5E7EB')
@@ -569,53 +589,43 @@ class CreateEventPage(tk.Frame):
 
     def _build_payload(self):
         """Build API payload from form data"""
-        # Combine date and times
+        # Combine date and times using ISO 8601 format (YYYY-MM-DDTHH:MM:SS)
         date = self.form_data['event_date'].get().strip()
         start_time = self.form_data['start_time'].get().strip()
         end_time = self.form_data['end_time'].get().strip()
         
-        start_datetime = f"{date} {start_time}:00"
-        end_datetime = f"{date} {end_time}:00"
+        # Java expects ISO 8601 format with 'T' separator
+        start_datetime = f"{date}T{start_time}:00"
+        end_datetime = f"{date}T{end_time}:00"
+        
+        # Get current user's ID from session
+        user_data = self.session.get_user()
+        if not user_data:
+            raise Exception("User session not found. Please log in again.")
+        
+        # Get user ID - could be 'id' or 'user_id' depending on how session was set
+        user_id = user_data.get('id') or user_data.get('user_id')
+        if not user_id:
+            raise Exception("User ID not found in session. Please log in again.")
         
         payload = {
             'title': self.form_data['title'].get().strip(),
-            'category': self.form_data['category'].get(),
             'description': self.form_data['description'].get('1.0', 'end-1c').strip(),
-            'event_type': self.form_data['event_type'].get(),
-            'start_time': start_datetime,
-            'end_time': end_datetime,
+            'organizerId': user_id,  # REQUIRED by backend
+            'startTime': start_datetime,  # ISO 8601 format: YYYY-MM-DDTHH:MM:SS
+            'endTime': end_datetime,  # ISO 8601 format: YYYY-MM-DDTHH:MM:SS
         }
         
-        # Add venue or meeting link
+        # Add venue (REQUIRED by backend)
         if self.form_data['event_type'].get() == 'Offline':
             payload['venue'] = self.form_data['venue'].get().strip()
         else:
-            payload['meeting_link'] = self.form_data['meeting_link'].get().strip()
-            payload['venue'] = 'Online'  # Backend might require venue field
+            # For online events, set venue to "Online" since backend requires it
+            payload['venue'] = self.form_data['meeting_link'].get().strip() or 'Online Meeting'
         
-        # Optional fields
-        if self.form_data['expected_attendees'].get().strip():
-            try:
-                payload['capacity'] = int(self.form_data['expected_attendees'].get().strip())
-            except ValueError:
-                pass
-        
-        if self.form_data['registration_deadline'].get().strip():
-            payload['registration_deadline'] = self.form_data['registration_deadline'].get().strip()
-        
-        # Resources
-        selected_resources = []
-        for key, var in self.form_data['resources'].items():
-            if var.get():
-                selected_resources.append(key)
-        
-        if selected_resources:
-            payload['resources'] = selected_resources
-        
-        # Additional requirements
-        additional = self.form_data['additional_requirements'].get('1.0', 'end-1c').strip()
-        if additional:
-            payload['additional_requirements'] = additional
+        # Note: Backend DTO only accepts: title, description, organizerId, startTime, endTime, venue
+        # Other fields (category, event_type, resources, etc.) are not in the CreateEventRequest DTO
+        # If you need these fields, you must update the backend DTO first
         
         return payload
 

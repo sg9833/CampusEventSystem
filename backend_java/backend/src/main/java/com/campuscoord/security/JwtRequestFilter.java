@@ -1,5 +1,6 @@
 package com.campuscoord.security;
 
+import com.campuscoord.model.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,10 +51,14 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             if (jwtUtil.validateToken(jwt) && !jwtUtil.isTokenExpired(jwt)) {
                 String role = jwtUtil.extractRole(jwt);
+                Integer userId = jwtUtil.extractUserId(jwt);
+                
+                // Create a User object with the JWT claims
+                User user = new User(userId, null, email, null, null, role, null);
                 
                 UsernamePasswordAuthenticationToken authToken = 
                     new UsernamePasswordAuthenticationToken(
-                        email,
+                        user,  // Set User object as principal instead of just email
                         null,
                         Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
                     );

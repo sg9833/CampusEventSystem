@@ -23,12 +23,13 @@ public class UserDao {
     }
 
     public Optional<User> findByEmail(String email) {
-        String sql = "SELECT id, name, email, password_hash, role, created_at FROM users WHERE email = ?";
+        String sql = "SELECT id, name, email, username, password_hash, role, created_at FROM users WHERE email = ?";
         try {
             User user = jdbc.queryForObject(sql, (rs, rowNum) -> new User(
                     rs.getInt("id"),
                     rs.getString("name"),
                     rs.getString("email"),
+                    rs.getString("username"),
                     rs.getString("password_hash"),
                     rs.getString("role"),
                     toLocalDateTime(rs.getTimestamp("created_at"))
@@ -39,12 +40,31 @@ public class UserDao {
         }
     }
 
+    public Optional<User> findByUsername(String username) {
+        String sql = "SELECT id, name, email, username, password_hash, role, created_at FROM users WHERE username = ?";
+        try {
+            User user = jdbc.queryForObject(sql, (rs, rowNum) -> new User(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getString("email"),
+                    rs.getString("username"),
+                    rs.getString("password_hash"),
+                    rs.getString("role"),
+                    toLocalDateTime(rs.getTimestamp("created_at"))
+            ), username);
+            return Optional.ofNullable(user);
+        } catch (EmptyResultDataAccessException ex) {
+            return Optional.empty();
+        }
+    }
+
     public User findById(int id) {
-        String sql = "SELECT id, name, email, password_hash, role, created_at FROM users WHERE id = ?";
+        String sql = "SELECT id, name, email, username, password_hash, role, created_at FROM users WHERE id = ?";
         return jdbc.queryForObject(sql, (rs, rowNum) -> new User(
                 rs.getInt("id"),
                 rs.getString("name"),
                 rs.getString("email"),
+                rs.getString("username"),
                 rs.getString("password_hash"),
                 rs.getString("role"),
                 toLocalDateTime(rs.getTimestamp("created_at"))
@@ -52,18 +72,19 @@ public class UserDao {
     }
 
     public int create(User user) {
-        String sql = "INSERT INTO users (name, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO users (name, email, username, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, user.getName());
             ps.setString(2, user.getEmail());
-            ps.setString(3, user.getPasswordHash());
-            ps.setString(4, user.getRole());
+            ps.setString(3, user.getUsername());
+            ps.setString(4, user.getPasswordHash());
+            ps.setString(5, user.getRole());
             if (user.getCreatedAt() != null) {
-                ps.setTimestamp(5, toTimestamp(user.getCreatedAt()));
+                ps.setTimestamp(6, toTimestamp(user.getCreatedAt()));
             } else {
-                ps.setTimestamp(5, null);
+                ps.setTimestamp(6, null);
             }
             return ps;
         }, keyHolder);
@@ -72,15 +93,16 @@ public class UserDao {
         return key != null ? key.intValue() : -1;
     }
 
-    public int createUser(String name, String email, String passwordHash, String role) {
-        String sql = "INSERT INTO users (name, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, NOW())";
+    public int createUser(String name, String email, String username, String passwordHash, String role) {
+        String sql = "INSERT INTO users (name, email, username, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?, NOW())";
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, name);
             ps.setString(2, email);
-            ps.setString(3, passwordHash);
-            ps.setString(4, role);
+            ps.setString(3, username);
+            ps.setString(4, passwordHash);
+            ps.setString(5, role);
             return ps;
         }, keyHolder);
 

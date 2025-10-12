@@ -225,3 +225,7 @@ def is_development() -> bool:
 def is_production() -> bool:
     """Check if production environment."""
     return config.is_production()
+
+
+# Expose API_BASE_URL at module level for backwards compatibility
+API_BASE_URL = get_api_base_url()

@@ -36,7 +36,8 @@ class ButtonStyles:
             activeforeground=ButtonStyles.PRIMARY_FG,
             cursor='hand2',
             relief=tk.FLAT,
-            bd=0
+            bd=0,
+            highlightthickness=0
         )
         return button
     
@@ -50,7 +51,8 @@ class ButtonStyles:
             activeforeground=ButtonStyles.SECONDARY_FG,
             cursor='hand2',
             relief=tk.FLAT,
-            bd=0
+            bd=0,
+            highlightthickness=0
         )
         return button
     
@@ -64,7 +66,8 @@ class ButtonStyles:
             activeforeground=ButtonStyles.SUCCESS_FG,
             cursor='hand2',
             relief=tk.FLAT,
-            bd=0
+            bd=0,
+            highlightthickness=0
         )
         return button
     
@@ -78,13 +81,18 @@ class ButtonStyles:
             activeforeground=ButtonStyles.DANGER_FG,
             cursor='hand2',
             relief=tk.FLAT,
-            bd=0
+            bd=0,
+            highlightthickness=0
         )
         return button
     
     @staticmethod
     def create_styled_button(parent, text, command=None, style='primary', **kwargs):
         """Create a button with predefined style."""
+        # Set default font for macOS compatibility
+        if 'font' not in kwargs:
+            kwargs['font'] = ("Helvetica", 12)
+        
         button = tk.Button(parent, text=text, command=command, **kwargs)
         
         if style == 'primary':

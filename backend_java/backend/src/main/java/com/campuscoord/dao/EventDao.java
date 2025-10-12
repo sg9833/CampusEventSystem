@@ -68,6 +68,11 @@ public class EventDao {
         return key != null ? key.intValue() : -1;
     }
 
+    public void delete(int id) {
+        String sql = "DELETE FROM events WHERE id = ?";
+        jdbc.update(sql, id);
+    }
+
     private static LocalDateTime toLocalDateTime(Timestamp ts) {
         return ts == null ? null : ts.toLocalDateTime();
     }
