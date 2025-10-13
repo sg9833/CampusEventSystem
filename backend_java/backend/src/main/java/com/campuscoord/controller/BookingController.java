@@ -1,9 +1,11 @@
 package com.campuscoord.controller;
 
 import com.campuscoord.dto.BookingRequest;
+import com.campuscoord.model.User;
 import com.campuscoord.service.BookingService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -31,6 +33,19 @@ public class BookingController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid date format. Use ISO-8601."));
         } catch (IllegalStateException ex) {
             return ResponseEntity.status(409).body(Map.of("error", ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyBookings(Authentication authentication) {
+        try {
+            // Get userId from the authenticated User object
+            User user = (User) authentication.getPrincipal();
+            int userId = user.getId();
+            
+            return ResponseEntity.ok(bookingService.listBookingsForUser(userId));
         } catch (Exception ex) {
             return ResponseEntity.status(500).body(Map.of("error", ex.getMessage()));
         }

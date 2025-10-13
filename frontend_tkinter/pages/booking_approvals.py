@@ -56,13 +56,13 @@ class BookingApprovalsPage(tk.Frame):
         title_frame = tk.Frame(header_content, bg='white')
         title_frame.pack(side='left')
         tk.Label(title_frame, text='📋 Booking Approvals', bg='white', fg=self.colors.get('primary', '#2C3E50'), font=('Helvetica', 20, 'bold')).pack(anchor='w')
-        tk.Label(title_frame, text='Review and approve pending booking requests', bg='white', fg='#6B7280', font=('Helvetica', 10)).pack(anchor='w')
+        tk.Label(title_frame, text='Review and approve pending booking requests', bg='white', fg='#1F2937', font=('Helvetica', 10)).pack(anchor='w')
         
         # Action buttons
         btn_frame = tk.Frame(header_content, bg='white')
         btn_frame.pack(side='right')
         
-        tk.Button(btn_frame, text='🔄 Refresh', command=self._load_pending_bookings, bg='#F3F4F6', fg='#374151', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', padx=(0, 8))
+        tk.Button(btn_frame, text='🔄 Refresh', command=self._load_pending_bookings, bg='#F3F4F6', fg='#1F2937', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', padx=(0, 8))
         
         self.view_toggle_btn = tk.Button(btn_frame, text='📅 Calendar View', command=self._toggle_view, bg=self.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6)
         self.view_toggle_btn.pack(side='left', padx=(0, 8))
@@ -78,14 +78,14 @@ class BookingApprovalsPage(tk.Frame):
         controls_content.pack(fill='x', padx=20, pady=12)
         
         # Queue info
-        self.queue_label = tk.Label(controls_content, text='Loading...', bg='white', fg='#6B7280', font=('Helvetica', 11))
+        self.queue_label = tk.Label(controls_content, text='Loading...', bg='white', fg='#1F2937', font=('Helvetica', 11))
         self.queue_label.pack(side='left')
         
         # Sort and filters (for list view)
         self.list_controls = tk.Frame(controls_content, bg='white')
         self.list_controls.pack(side='right')
         
-        tk.Label(self.list_controls, text='Sort by:', bg='white', fg='#6B7280', font=('Helvetica', 10)).pack(side='right', padx=(0, 6))
+        tk.Label(self.list_controls, text='Sort by:', bg='white', fg='#1F2937', font=('Helvetica', 10)).pack(side='right', padx=(0, 6))
         sort_dropdown = ttk.Combobox(self.list_controls, textvariable=self.sort_by, state='readonly', width=20, font=('Helvetica', 10))
         sort_dropdown['values'] = ('date', 'priority', 'resource', 'user')
         sort_dropdown.pack(side='right', padx=(0, 20))
@@ -124,7 +124,7 @@ class BookingApprovalsPage(tk.Frame):
         loading_frame = tk.Frame(self.content_area, bg=self.colors.get('background', '#ECF0F1'))
         loading_frame.pack(fill='both', expand=True, pady=50)
         
-        tk.Label(loading_frame, text='Loading pending bookings...', bg=self.colors.get('background', '#ECF0F1'), fg='#6B7280', font=('Helvetica', 12)).pack()
+        tk.Label(loading_frame, text='Loading pending bookings...', bg=self.colors.get('background', '#ECF0F1'), fg='#1F2937', font=('Helvetica', 12)).pack()
         
         spinner = ttk.Progressbar(loading_frame, mode='indeterminate', length=300)
         spinner.pack(pady=10)
@@ -205,8 +205,8 @@ class BookingApprovalsPage(tk.Frame):
             empty_frame.pack(fill='both', expand=True, pady=20)
             
             tk.Label(empty_frame, text='✅', bg='white', font=('Helvetica', 48)).pack(pady=(40, 10))
-            tk.Label(empty_frame, text='All caught up!', bg='white', fg='#374151', font=('Helvetica', 14, 'bold')).pack()
-            tk.Label(empty_frame, text='No pending bookings to review', bg='white', fg='#6B7280', font=('Helvetica', 10)).pack(pady=(4, 40))
+            tk.Label(empty_frame, text='All caught up!', bg='white', fg='#1F2937', font=('Helvetica', 14, 'bold')).pack()
+            tk.Label(empty_frame, text='No pending bookings to review', bg='white', fg='#1F2937', font=('Helvetica', 10)).pack(pady=(4, 40))
         else:
             # Booking cards
             for booking in self.pending_bookings:
@@ -252,7 +252,7 @@ class BookingApprovalsPage(tk.Frame):
         # User info
         user_name = booking.get('user_name', 'Unknown User')
         user_role = booking.get('user_role', 'User')
-        tk.Label(info_frame, text=f"Requested by: {user_name} ({user_role})", bg='white', fg='#6B7280', font=('Helvetica', 9)).pack(anchor='w', pady=(2, 0))
+        tk.Label(info_frame, text=f"Requested by: {user_name} ({user_role})", bg='white', fg='#1F2937', font=('Helvetica', 9)).pack(anchor='w', pady=(2, 0))
         
         # Badges
         badges_frame = tk.Frame(header_row, bg='white')
@@ -292,8 +292,8 @@ class BookingApprovalsPage(tk.Frame):
         if len(purpose) > 150:
             purpose = purpose[:150] + '...'
         
-        tk.Label(content, text='Purpose:', bg='white', fg='#6B7280', font=('Helvetica', 9, 'bold')).pack(anchor='w', pady=(0, 4))
-        tk.Label(content, text=purpose, bg='white', fg='#374151', font=('Helvetica', 9), wraplength=900, justify='left').pack(anchor='w', pady=(0, 12))
+        tk.Label(content, text='Purpose:', bg='white', fg='#1F2937', font=('Helvetica', 9, 'bold')).pack(anchor='w', pady=(0, 4))
+        tk.Label(content, text=purpose, bg='white', fg='#1F2937', font=('Helvetica', 9), wraplength=900, justify='left').pack(anchor='w', pady=(0, 12))
         
         # Conflict warning
         if booking.get('has_conflict', False):
@@ -310,7 +310,7 @@ class BookingApprovalsPage(tk.Frame):
         actions_frame = tk.Frame(content, bg='white')
         actions_frame.pack(fill='x')
         
-        tk.Button(actions_frame, text='View Full Details', command=lambda: self._show_approval_modal(booking), bg='#F3F4F6', fg='#374151', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', padx=(0, 8))
+        tk.Button(actions_frame, text='View Full Details', command=lambda: self._show_approval_modal(booking), bg='#F3F4F6', fg='#1F2937', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', padx=(0, 8))
         
         tk.Button(actions_frame, text='✅ Approve', command=lambda: self._approve_booking(booking), bg=self.colors.get('success', '#27AE60'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=16, pady=6).pack(side='left', padx=(0, 8))
         
@@ -325,7 +325,7 @@ class BookingApprovalsPage(tk.Frame):
         """Add detail item"""
         frame = tk.Frame(parent, bg='#F9FAFB')
         frame.pack(side='left', padx=(0, 24))
-        tk.Label(frame, text=label, bg='#F9FAFB', fg='#6B7280', font=('Helvetica', 9)).pack(side='left', padx=(0, 4))
+        tk.Label(frame, text=label, bg='#F9FAFB', fg='#1F2937', font=('Helvetica', 9)).pack(side='left', padx=(0, 4))
         tk.Label(frame, text=value, bg='#F9FAFB', fg='#1F2937', font=('Helvetica', 9, 'bold')).pack(side='left')
 
     def _render_calendar_view(self):
@@ -346,13 +346,13 @@ class BookingApprovalsPage(tk.Frame):
         header_content.pack(padx=20, pady=12)
         
         # Month navigation
-        tk.Button(header_content, text='◀', command=self._prev_month, bg='#F3F4F6', fg='#374151', relief='flat', font=('Helvetica', 12, 'bold'), padx=12, pady=4).pack(side='left', padx=(0, 12))
+        tk.Button(header_content, text='◀', command=self._prev_month, bg='#F3F4F6', fg='#1F2937', relief='flat', font=('Helvetica', 12, 'bold'), padx=12, pady=4).pack(side='left', padx=(0, 12))
         
         month_names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
         month_label = tk.Label(header_content, text=f"{month_names[self.current_month - 1]} {self.current_year}", bg='white', fg='#1F2937', font=('Helvetica', 14, 'bold'))
         month_label.pack(side='left', padx=12)
         
-        tk.Button(header_content, text='▶', command=self._next_month, bg='#F3F4F6', fg='#374151', relief='flat', font=('Helvetica', 12, 'bold'), padx=12, pady=4).pack(side='left', padx=(12, 0))
+        tk.Button(header_content, text='▶', command=self._next_month, bg='#F3F4F6', fg='#1F2937', relief='flat', font=('Helvetica', 12, 'bold'), padx=12, pady=4).pack(side='left', padx=(12, 0))
         
         # Today button
         tk.Button(header_content, text='Today', command=self._goto_today, bg=self.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=16, pady=4).pack(side='right', padx=(20, 0))
@@ -391,7 +391,7 @@ class BookingApprovalsPage(tk.Frame):
         header_row.pack(fill='x', padx=20, pady=(20, 0))
         
         for day_name in day_names:
-            tk.Label(header_row, text=day_name, bg='#F9FAFB', fg='#6B7280', font=('Helvetica', 10, 'bold'), width=15, height=2).pack(side='left', padx=1)
+            tk.Label(header_row, text=day_name, bg='#F9FAFB', fg='#1F2937', font=('Helvetica', 10, 'bold'), width=15, height=2).pack(side='left', padx=1)
         
         # Get calendar data
         first_day = datetime(self.current_year, self.current_month, 1)
@@ -461,7 +461,7 @@ class BookingApprovalsPage(tk.Frame):
                             booking_item.bind('<Button-1>', lambda e, b=booking: self._show_approval_modal(b))
                         
                         if len(bookings_by_date[day_num]) > 4:
-                            more_label = tk.Label(bookings_container, text=f'+{len(bookings_by_date[day_num]) - 4}', bg='#FFFFFF' if not is_today else '#E0E7FF', fg='#6B7280', font=('Helvetica', 7, 'bold'))
+                            more_label = tk.Label(bookings_container, text=f'+{len(bookings_by_date[day_num]) - 4}', bg='#FFFFFF' if not is_today else '#E0E7FF', fg='#1F2937', font=('Helvetica', 7, 'bold'))
                             more_label.pack(anchor='center', pady=1)
                     
                     day_num += 1
@@ -477,7 +477,7 @@ class BookingApprovalsPage(tk.Frame):
         color_box.pack(side='left', padx=(0, 4))
         color_box.pack_propagate(False)
         
-        tk.Label(frame, text=text, bg='white', fg='#374151', font=('Helvetica', 9)).pack(side='left')
+        tk.Label(frame, text=text, bg='white', fg='#1F2937', font=('Helvetica', 9)).pack(side='left')
 
     def _prev_month(self):
         """Navigate to previous month"""
@@ -569,13 +569,13 @@ class BookingApprovalsPage(tk.Frame):
         
         # Purpose
         tk.Label(details_frame, text='Purpose:', bg='white', fg='#1F2937', font=('Helvetica', 11, 'bold')).pack(anchor='w', pady=(0, 8))
-        tk.Label(details_frame, text=booking.get('purpose', 'No purpose'), bg='white', fg='#6B7280', font=('Helvetica', 10), wraplength=720, justify='left').pack(anchor='w', pady=(0, 16))
+        tk.Label(details_frame, text=booking.get('purpose', 'No purpose'), bg='white', fg='#1F2937', font=('Helvetica', 10), wraplength=720, justify='left').pack(anchor='w', pady=(0, 16))
         
         # Requirements
         requirements = booking.get('additional_requirements', '').strip()
         if requirements:
             tk.Label(details_frame, text='Additional Requirements:', bg='white', fg='#1F2937', font=('Helvetica', 11, 'bold')).pack(anchor='w', pady=(0, 8))
-            tk.Label(details_frame, text=requirements, bg='white', fg='#6B7280', font=('Helvetica', 10), wraplength=720, justify='left').pack(anchor='w', pady=(0, 16))
+            tk.Label(details_frame, text=requirements, bg='white', fg='#1F2937', font=('Helvetica', 10), wraplength=720, justify='left').pack(anchor='w', pady=(0, 16))
         
         # User information
         self._add_section_header(details_frame, 'User Information')
@@ -591,7 +591,7 @@ class BookingApprovalsPage(tk.Frame):
         self._add_modal_detail(user_content, 'Role:', booking.get('user_role', 'N/A'))
         
         # User booking history
-        tk.Label(details_frame, text="User's Booking History:", bg='white', fg='#6B7280', font=('Helvetica', 10)).pack(anchor='w', pady=(0, 8))
+        tk.Label(details_frame, text="User's Booking History:", bg='white', fg='#1F2937', font=('Helvetica', 10)).pack(anchor='w', pady=(0, 8))
         
         history_frame = tk.Frame(details_frame, bg='#EFF6FF', highlightthickness=1, highlightbackground='#BFDBFE')
         history_frame.pack(fill='x', pady=(0, 16))
@@ -633,7 +633,7 @@ class BookingApprovalsPage(tk.Frame):
         # Comments
         self._add_section_header(details_frame, 'Admin Comments')
         
-        tk.Label(details_frame, text='Add comments or notes (optional):', bg='white', fg='#6B7280', font=('Helvetica', 9)).pack(anchor='w', pady=(0, 6))
+        tk.Label(details_frame, text='Add comments or notes (optional):', bg='white', fg='#1F2937', font=('Helvetica', 9)).pack(anchor='w', pady=(0, 6))
         
         comments_text = tk.Text(details_frame, height=4, font=('Helvetica', 10), wrap='word')
         comments_text.pack(fill='x', pady=(0, 16))
@@ -649,7 +649,7 @@ class BookingApprovalsPage(tk.Frame):
         tk.Button(decision_frame, text='❌ Reject Booking', command=lambda: [modal.destroy(), self._reject_booking(booking, comments_text.get('1.0', 'end-1c'))], bg=self.colors.get('danger', '#E74C3C'), fg='white', relief='flat', font=('Helvetica', 11, 'bold'), padx=30, pady=12, width=20).pack(side='left')
         
         # Close button
-        tk.Button(details_frame, text='Close Without Decision', command=modal.destroy, bg='#E5E7EB', fg='#374151', relief='flat', font=('Helvetica', 11, 'bold'), padx=30, pady=12).pack(fill='x', pady=(16, 0))
+        tk.Button(details_frame, text='Close Without Decision', command=modal.destroy, bg='#E5E7EB', fg='#1F2937', relief='flat', font=('Helvetica', 11, 'bold'), padx=30, pady=12).pack(fill='x', pady=(16, 0))
 
     def _add_section_header(self, parent, text):
         """Add section header"""
@@ -660,7 +660,7 @@ class BookingApprovalsPage(tk.Frame):
         """Add modal detail row"""
         row = tk.Frame(parent, bg='#F9FAFB')
         row.pack(fill='x', pady=4)
-        tk.Label(row, text=label, bg='#F9FAFB', fg='#6B7280', font=('Helvetica', 10), width=20, anchor='w').pack(side='left')
+        tk.Label(row, text=label, bg='#F9FAFB', fg='#1F2937', font=('Helvetica', 10), width=20, anchor='w').pack(side='left')
         tk.Label(row, text=str(value), bg='#F9FAFB', fg='#1F2937', font=('Helvetica', 10, 'bold')).pack(side='left')
 
     def _approve_booking(self, booking, comments=''):

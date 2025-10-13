@@ -6,6 +6,7 @@ from calendar import monthrange
 
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
+from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_danger_button
 
 
 class MyBookingsPage(tk.Frame):
@@ -61,13 +62,13 @@ class MyBookingsPage(tk.Frame):
         btn_frame = tk.Frame(header_content, bg='white')
         btn_frame.pack(side='right')
         
-        tk.Button(btn_frame, text='🔄 Refresh', command=self._load_bookings, bg='#F3F4F6', fg='#1F2937', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', padx=(0, 8))
+        create_secondary_button(btn_frame, text='🔄 Refresh', command=self._load_bookings).pack(side='left', padx=(0, 8))
         
         # View toggle
-        self.view_toggle_btn = tk.Button(btn_frame, text='📅 Calendar View', command=self._toggle_view, bg=self.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6)
+        self.view_toggle_btn = create_primary_button(btn_frame, text='📅 Calendar View', command=self._toggle_view)
         self.view_toggle_btn.pack(side='left', padx=(0, 8))
         
-        tk.Button(btn_frame, text='➕ New Booking', command=self._new_booking, bg=self.colors.get('success', '#27AE60'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left')
+        create_success_button(btn_frame, text='➕ New Booking', command=self._new_booking).pack(side='left')
         
         # Content container
         content_container = tk.Frame(self, bg=self.colors.get('background', '#ECF0F1'))
@@ -140,16 +141,16 @@ class MyBookingsPage(tk.Frame):
         header_content.pack(padx=20, pady=12)
         
         # Month navigation
-        tk.Button(header_content, text='◀', command=self._prev_month, bg='#F3F4F6', fg='#1F2937', relief='flat', font=('Helvetica', 12, 'bold'), padx=12, pady=4).pack(side='left', padx=(0, 12))
+        create_secondary_button(header_content, text='◀', command=self._prev_month).pack(side='left', padx=(0, 12))
         
         month_names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
         month_label = tk.Label(header_content, text=f"{month_names[self.current_month - 1]} {self.current_year}", bg='white', fg='#1F2937', font=('Helvetica', 14, 'bold'))
         month_label.pack(side='left', padx=12)
         
-        tk.Button(header_content, text='▶', command=self._next_month, bg='#F3F4F6', fg='#1F2937', relief='flat', font=('Helvetica', 12, 'bold'), padx=12, pady=4).pack(side='left', padx=(12, 0))
+        create_secondary_button(header_content, text='▶', command=self._next_month).pack(side='left', padx=(12, 0))
         
         # Today button
-        tk.Button(header_content, text='Today', command=self._goto_today, bg=self.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=16, pady=4).pack(side='right', padx=(20, 0))
+        create_primary_button(header_content, text='Today', command=self._goto_today).pack(side='right', padx=(20, 0))
         
         # Calendar grid
         cal_frame = tk.Frame(self.content_area, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
@@ -347,20 +348,20 @@ class MyBookingsPage(tk.Frame):
         actions_frame = tk.Frame(content, bg='white')
         actions_frame.pack(fill='x')
         
-        tk.Button(actions_frame, text='View Details', command=lambda: self._show_booking_details(booking), bg='#F3F4F6', fg='#1F2937', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', padx=(0, 8))
+        create_secondary_button(actions_frame, text='View Details', command=lambda: self._show_booking_details(booking)).pack(side='left', padx=(0, 8))
         
         # Conditional actions based on status
         if status in ['pending', 'approved']:
             # Check if booking date hasn't passed
             booking_date_obj = self._parse_date(booking.get('date', ''))
             if booking_date_obj and booking_date_obj >= datetime.now().date():
-                tk.Button(actions_frame, text='Cancel Booking', command=lambda: self._cancel_booking(booking), bg=self.colors.get('danger', '#E74C3C'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', padx=(0, 8))
+                create_danger_button(actions_frame, text='Cancel Booking', command=lambda: self._cancel_booking(booking)).pack(side='left', padx=(0, 8))
         
         if status == 'approved':
-            tk.Button(actions_frame, text='📥 Download Confirmation', command=lambda: self._download_confirmation(booking), bg=self.colors.get('success', '#27AE60'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', padx=(0, 8))
+            create_success_button(actions_frame, text='📥 Download Confirmation', command=lambda: self._download_confirmation(booking)).pack(side='left', padx=(0, 8))
         
         if status == 'rejected':
-            tk.Button(actions_frame, text='🔄 Rebook', command=lambda: self._rebook(booking), bg=self.colors.get('secondary', '#3498DB'), fg='white', relief='flat', font=('Helvetica', 9, 'bold'), padx=12, pady=6).pack(side='left', padx=(0, 8))
+            create_primary_button(actions_frame, text='🔄 Rebook', command=lambda: self._rebook(booking)).pack(side='left', padx=(0, 8))
         
         return card
 
@@ -557,7 +558,7 @@ class MyBookingsPage(tk.Frame):
             tk.Label(rejection_content, text=rejection_reason, bg='#FEF2F2', fg='#991B1B', font=('Helvetica', 9), wraplength=520, justify='left').pack(anchor='w', pady=(4, 0))
         
         # Close button
-        tk.Button(details_frame, text='Close', command=modal.destroy, bg='#E5E7EB', fg='#1F2937', relief='flat', font=('Helvetica', 11, 'bold'), padx=30, pady=12).pack(fill='x', pady=(16, 0))
+        create_secondary_button(details_frame, text='Close', command=modal.destroy).pack(fill='x', pady=(16, 0))
 
     def _add_modal_detail(self, parent, label, value):
         """Add detail row to modal"""

@@ -60,6 +60,15 @@ public class BookingDao {
         ), userId);
     }
 
+    public List<String> getBookedSlotsForDate(int resourceId, String date) {
+        // Query bookings for the given resource and date, return start times in HH:mm format
+        String sql = "SELECT DISTINCT DATE_FORMAT(start_time, '%H:%i') as slot " +
+                     "FROM bookings " +
+                     "WHERE resource_id = ? AND DATE(start_time) = ? AND status IN ('approved', 'pending') " +
+                     "ORDER BY slot";
+        return jdbc.query(sql, (rs, rowNum) -> rs.getString("slot"), resourceId, date);
+    }
+
     private static LocalDateTime toLocalDateTime(Timestamp ts) {
         return ts == null ? null : ts.toLocalDateTime();
     }
