@@ -400,51 +400,115 @@ class AdminDashboard(tk.Frame):
         self._render_events_management_table(filtered)
 
     def _render_events_management_table(self, events):
-        """Render events table with admin actions"""
+        """Render events table with admin actions using Treeview"""
         frame = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
         frame.pack(fill='both', expand=True, padx=16, pady=(0, 16))
 
-        # Header
-        header = tk.Frame(frame, bg='#F9FAFB')
-        header.pack(fill='x')
-        headers = ['Event Title', 'Organizer', 'Date', 'Venue', 'Status', 'Actions']
-        for i, h in enumerate(headers):
-            tk.Label(header, text=h, bg='#F9FAFB', fg='#374151', font=('Helvetica', 10, 'bold')).grid(row=0, column=i, sticky='w', padx=8, pady=8)
-            header.grid_columnconfigure(i, weight=1 if i == 0 else 0)
-
         if not events:
             tk.Label(frame, text='No events found', bg='white', fg='#6B7280').pack(padx=12, pady=20)
-        else:
-            for event in events:
-                row = tk.Frame(frame, bg='white')
-                row.pack(fill='x', padx=4, pady=2)
-                
-                status = (event.get('status') or 'pending').title()
-                status_colors = {
-                    'Approved': '#27AE60',
-                    'Pending': '#F39C12',
-                    'Rejected': '#E74C3C'
-                }
-                status_color = status_colors.get(status, '#6B7280')
-                
-                tk.Label(row, text=event.get('title', 'Untitled'), bg='white', font=('Helvetica', 10, 'bold')).grid(row=0, column=0, sticky='w', padx=8, pady=8)
-                tk.Label(row, text=f"User #{event.get('organizer_id', 'N/A')}", bg='white', fg='#6B7280').grid(row=0, column=1, sticky='w', padx=8)
-                tk.Label(row, text=event.get('start_time', 'N/A'), bg='white', fg='#6B7280').grid(row=0, column=2, sticky='w', padx=8)
-                tk.Label(row, text=event.get('venue', 'N/A'), bg='white', fg='#6B7280').grid(row=0, column=3, sticky='w', padx=8)
-                tk.Label(row, text=status, bg='white', fg=status_color, font=('Helvetica', 10, 'bold')).grid(row=0, column=4, sticky='w', padx=8)
-                
-                # Action buttons
-                btn_frame = tk.Frame(row, bg='white')
-                btn_frame.grid(row=0, column=5, padx=8)
-                
-                if status == 'Pending':
-                    approve_icon_btn = create_success_button(btn_frame, '✓', lambda e=event: self._approve_event(e), width=30, height=30)
-                    approve_icon_btn.pack(side='left', padx=2)
-                    reject_icon_btn = create_danger_button(btn_frame, '✗', lambda e=event: self._reject_event(e), width=30, height=30)
-                    reject_icon_btn.pack(side='left', padx=2)
-                
-                view_btn = create_primary_button(btn_frame, 'View', lambda e=event: self._view_event_details(e), width=60, height=30)
-                view_btn.pack(side='left', padx=2)
+            return
+
+        # Create scrollable container
+        scroll_frame = tk.Frame(frame, bg='white')
+        scroll_frame.pack(fill='both', expand=True)
+
+        # Scrollbar
+        scrollbar = ttk.Scrollbar(scroll_frame, orient='vertical')
+        scrollbar.pack(side='right', fill='y')
+
+        # Treeview for table
+        columns = ('title', 'organizer', 'date', 'venue', 'status')
+        tree = ttk.Treeview(scroll_frame, columns=columns, show='headings', 
+                           height=15, yscrollcommand=scrollbar.set)
+        scrollbar.config(command=tree.yview)
+
+        # Define column headings and widths
+        tree.heading('title', text='Event Title')
+        tree.heading('organizer', text='Organizer')
+        tree.heading('date', text='Date')
+        tree.heading('venue', text='Venue')
+        tree.heading('status', text='Status')
+
+        # Set column widths
+        tree.column('title', width=250, minwidth=200, anchor='w')
+        tree.column('organizer', width=120, minwidth=100, anchor='w')
+        tree.column('date', width=180, minwidth=150, anchor='w')
+        tree.column('venue', width=150, minwidth=120, anchor='w')
+        tree.column('status', width=100, minwidth=80, anchor='center')
+
+        # Configure row colors
+        tree.tag_configure('approved', foreground='#27AE60')
+        tree.tag_configure('pending', foreground='#F39C12')
+        tree.tag_configure('rejected', foreground='#E74C3C')
+
+        # Insert data
+        for event in events:
+            status = (event.get('status') or 'pending').lower()
+            values = (
+                event.get('title', 'Untitled'),
+                f"User #{event.get('organizer_id', 'N/A')}",
+                event.get('start_time', 'N/A'),
+                event.get('venue', 'N/A'),
+                status.title()
+            )
+            tree.insert('', 'end', values=values, tags=(status,))
+
+        tree.pack(side='left', fill='both', expand=True)
+
+        # Action buttons panel
+        action_frame = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
+        action_frame.pack(fill='x', padx=16, pady=(8, 0))
+        
+        tk.Label(action_frame, text='Select an event to perform actions', 
+                bg=self.controller.colors.get('background', '#ECF0F1'), 
+                fg='#6B7280', font=('Helvetica', 9, 'italic')).pack(side='left')
+
+        # Button panel
+        btn_panel = tk.Frame(action_frame, bg=self.controller.colors.get('background', '#ECF0F1'))
+        btn_panel.pack(side='right')
+
+        def on_approve():
+            selected = tree.selection()
+            if not selected:
+                messagebox.showwarning('No Selection', 'Please select an event to approve')
+                return
+            index = tree.index(selected[0])
+            event = events[index]
+            if (event.get('status') or 'pending').lower() != 'pending':
+                messagebox.showinfo('Info', 'Only pending events can be approved')
+                return
+            self._approve_event(event)
+
+        def on_reject():
+            selected = tree.selection()
+            if not selected:
+                messagebox.showwarning('No Selection', 'Please select an event to reject')
+                return
+            index = tree.index(selected[0])
+            event = events[index]
+            if (event.get('status') or 'pending').lower() != 'pending':
+                messagebox.showinfo('Info', 'Only pending events can be rejected')
+                return
+            self._reject_event(event)
+
+        def on_view():
+            selected = tree.selection()
+            if not selected:
+                messagebox.showwarning('No Selection', 'Please select an event to view')
+                return
+            index = tree.index(selected[0])
+            event = events[index]
+            self._view_event_details(event)
+
+        # Action buttons
+        approve_btn = create_success_button(btn_panel, '✓ Approve', on_approve, width=100, height=32)
+        approve_btn.pack(side='left', padx=2)
+        
+        reject_btn = create_danger_button(btn_panel, '✗ Reject', on_reject, width=90, height=32)
+        reject_btn.pack(side='left', padx=2)
+        
+        view_btn = create_primary_button(btn_panel, '👁 View Details', on_view, width=120, height=32)
+        view_btn.pack(side='left', padx=2)
 
     def _render_manage_resources(self):
         self._clear_content()

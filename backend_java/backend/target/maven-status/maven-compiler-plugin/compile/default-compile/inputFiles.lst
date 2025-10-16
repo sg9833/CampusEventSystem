@@ -1,4 +1,5 @@
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/controller/EventController.java
+/Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/model/EventRegistration.java
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/exception/ValidationExceptionHandler.java
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/dto/GenericResponse.java
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/dao/ResourceDao.java
@@ -9,6 +10,8 @@
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/model/Event.java
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/CampusCoordApplication.java
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/security/SecurityConfig.java
+/Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/dao/EventRegistrationDao.java
+/Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/controller/AdminController.java
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/dto/CreateEventRequest.java
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/controller/ResourceController.java
 /Users/garinesaiajay/Desktop/CampusEventSystem/backend_java/backend/src/main/java/com/campuscoord/controller/BookingController.java

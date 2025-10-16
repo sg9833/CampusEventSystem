@@ -318,8 +318,38 @@ class StudentDashboard(tk.Frame):
 
     # Actions
     def _register_event(self, event):
-        # Endpoint is not specified in backend; show a friendly message for now
-        messagebox.showinfo('Register', f"Registration for '{event.get('title', 'Event')}' is not implemented yet.")
+        """Register for an event"""
+        event_id = event.get('id')
+        event_title = event.get('title', 'Event')
+        
+        if not event_id:
+            messagebox.showerror('Error', 'Invalid event')
+            return
+        
+        # Check if already registered
+        if any(e.get('id') == event_id for e in self.registered_events):
+            messagebox.showinfo('Already Registered', f"You are already registered for '{event_title}'")
+            return
+        
+        # Confirm registration
+        if not messagebox.askyesno('Confirm Registration', f"Do you want to register for '{event_title}'?"):
+            return
+        
+        try:
+            # Call registration endpoint
+            response = self.api.post(f'events/{event_id}/register', {})
+            messagebox.showinfo('Success', f"Successfully registered for '{event_title}'!")
+            
+            # Reload data to refresh the view
+            self._load_all_data_then(self._render_dashboard)
+        except Exception as e:
+            error_msg = str(e)
+            if 'already registered' in error_msg.lower():
+                messagebox.showinfo('Already Registered', f"You are already registered for '{event_title}'")
+            elif 'not approved' in error_msg.lower() or 'non-approved' in error_msg.lower():
+                messagebox.showerror('Error', 'This event is not yet approved by admin')
+            else:
+                messagebox.showerror('Error', f'Failed to register: {error_msg}')
 
     def _logout(self):
         try:

@@ -22,7 +22,7 @@ public class EventDao {
     }
 
     public List<Event> findAll() {
-        String sql = "SELECT id, title, description, organizer_id, start_time, end_time, venue, created_at FROM events";
+        String sql = "SELECT id, title, description, organizer_id, start_time, end_time, venue, status, created_at FROM events";
         return jdbc.query(sql, (rs, rowNum) -> new Event(
                 rs.getInt("id"),
                 rs.getString("title"),
@@ -31,12 +31,28 @@ public class EventDao {
                 toLocalDateTime(rs.getTimestamp("start_time")),
                 toLocalDateTime(rs.getTimestamp("end_time")),
                 rs.getString("venue"),
+                rs.getString("status"),
+                toLocalDateTime(rs.getTimestamp("created_at"))
+        ));
+    }
+
+    public List<Event> findApproved() {
+        String sql = "SELECT id, title, description, organizer_id, start_time, end_time, venue, status, created_at FROM events WHERE status = 'approved'";
+        return jdbc.query(sql, (rs, rowNum) -> new Event(
+                rs.getInt("id"),
+                rs.getString("title"),
+                rs.getString("description"),
+                (Integer) rs.getObject("organizer_id"),
+                toLocalDateTime(rs.getTimestamp("start_time")),
+                toLocalDateTime(rs.getTimestamp("end_time")),
+                rs.getString("venue"),
+                rs.getString("status"),
                 toLocalDateTime(rs.getTimestamp("created_at"))
         ));
     }
 
     public Event findById(int id) {
-        String sql = "SELECT id, title, description, organizer_id, start_time, end_time, venue, created_at FROM events WHERE id = ?";
+        String sql = "SELECT id, title, description, organizer_id, start_time, end_time, venue, status, created_at FROM events WHERE id = ?";
         return jdbc.queryForObject(sql, (rs, rowNum) -> new Event(
                 rs.getInt("id"),
                 rs.getString("title"),
@@ -45,12 +61,13 @@ public class EventDao {
                 toLocalDateTime(rs.getTimestamp("start_time")),
                 toLocalDateTime(rs.getTimestamp("end_time")),
                 rs.getString("venue"),
+                rs.getString("status"),
                 toLocalDateTime(rs.getTimestamp("created_at"))
         ), id);
     }
 
     public int create(Event event) {
-        String sql = "INSERT INTO events (title, description, organizer_id, start_time, end_time, venue, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO events (title, description, organizer_id, start_time, end_time, venue, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -60,12 +77,18 @@ public class EventDao {
             ps.setTimestamp(4, toTimestamp(event.getStartTime()));
             ps.setTimestamp(5, toTimestamp(event.getEndTime()));
             ps.setString(6, event.getVenue());
-            ps.setTimestamp(7, toTimestamp(event.getCreatedAt()));
+            ps.setString(7, event.getStatus() != null ? event.getStatus() : "pending");
+            ps.setTimestamp(8, toTimestamp(event.getCreatedAt()));
             return ps;
         }, keyHolder);
 
         Number key = keyHolder.getKey();
         return key != null ? key.intValue() : -1;
+    }
+
+    public void updateStatus(int eventId, String status) {
+        String sql = "UPDATE events SET status = ? WHERE id = ?";
+        jdbc.update(sql, status, eventId);
     }
 
     public void delete(int id) {

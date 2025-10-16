@@ -18,11 +18,12 @@ public class Event {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String venue;
+    private String status;
     private LocalDateTime createdAt;
 
     public Event() {}
 
-    public Event(int id, String title, String description, Integer organizerId, LocalDateTime startTime, LocalDateTime endTime, String venue, LocalDateTime createdAt) {
+    public Event(int id, String title, String description, Integer organizerId, LocalDateTime startTime, LocalDateTime endTime, String venue, String status, LocalDateTime createdAt) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -30,6 +31,7 @@ public class Event {
         this.startTime = startTime;
         this.endTime = endTime;
         this.venue = venue;
+        this.status = status;
         this.createdAt = createdAt;
     }
 
@@ -54,6 +56,9 @@ public class Event {
     public String getVenue() { return venue; }
     public void setVenue(String venue) { this.venue = venue; }
 
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
@@ -67,6 +72,7 @@ public class Event {
                 ", startTime=" + startTime +
                 ", endTime=" + endTime +
                 ", venue='" + venue + '\'' +
+                ", status='" + status + '\'' +
                 ", createdAt=" + createdAt +
                 '}';
     }
