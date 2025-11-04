@@ -198,10 +198,10 @@ class BookResourcePage(tk.Frame):
         btn_frame = tk.Frame(form_content, bg='white')
         btn_frame.pack(fill='x', pady=(12, 0))
         
-        cancel_btn = create_secondary_button(btn_frame, text='Cancel', command=self._cancel)
+        cancel_btn = create_secondary_button(btn_frame, text='Cancel', command=self._cancel, width=200)
         cancel_btn.pack(side='left', padx=5)
         
-        submit_btn = create_primary_button(btn_frame, text='Submit Booking Request', command=self._submit_booking)
+        submit_btn = create_primary_button(btn_frame, text='Submit Booking Request', command=self._submit_booking, width=300)
         submit_btn.pack(side='right', padx=5)
 
     def _add_section_header(self, parent, text):
@@ -664,17 +664,23 @@ class BookResourcePage(tk.Frame):
         """Confirm and submit booking"""
         modal.destroy()
         
-        # Prepare booking data
+        # Get current user ID
+        user = self.session.get_user()
+        if not user or 'id' not in user:
+            messagebox.showerror('Error', 'User session not found. Please login again.')
+            return
+        
+        # Convert date + time to ISO-8601 datetime format (YYYY-MM-DDTHH:MM:SS)
+        start_datetime_str = f"{booking_date}T{start_time}:00"
+        end_datetime_str = f"{booking_date}T{end_time}:00"
+        
+        # Prepare booking data matching backend BookingRequest format
         booking_data = {
-            'resource_id': self.selected_resource.get('id'),
-            'purpose': self.purpose_var.get().strip(),
-            'date': booking_date,
-            'start_time': start_time,
-            'end_time': end_time,
-            'attendees': int(self.attendees_var.get().strip()),
-            'additional_requirements': self.requirements_var.get().strip(),
-            'priority': self.priority_var.get(),
-            'status': 'pending'
+            'userId': user['id'],
+            'resourceId': self.selected_resource.get('id'),
+            'startTime': start_datetime_str,
+            'endTime': end_datetime_str,
+            'eventId': None  # Optional field for event-related bookings
         }
         
         # Show loading

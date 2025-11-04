@@ -69,6 +69,42 @@ public class BookingDao {
         return jdbc.query(sql, (rs, rowNum) -> rs.getString("slot"), resourceId, date);
     }
 
+    public List<Booking> findPendingBookings() {
+        String sql = "SELECT id, event_id, user_id, resource_id, start_time, end_time, status, created_at " +
+                     "FROM bookings WHERE status = 'pending' ORDER BY created_at DESC";
+        return jdbc.query(sql, (rs, rowNum) -> new Booking(
+                rs.getInt("id"),
+                (Integer) rs.getObject("event_id"),
+                rs.getInt("user_id"),
+                rs.getInt("resource_id"),
+                toLocalDateTime(rs.getTimestamp("start_time")),
+                toLocalDateTime(rs.getTimestamp("end_time")),
+                rs.getString("status"),
+                toLocalDateTime(rs.getTimestamp("created_at"))
+        ));
+    }
+
+    public Booking findById(int id) {
+        String sql = "SELECT id, event_id, user_id, resource_id, start_time, end_time, status, created_at " +
+                     "FROM bookings WHERE id = ?";
+        List<Booking> bookings = jdbc.query(sql, (rs, rowNum) -> new Booking(
+                rs.getInt("id"),
+                (Integer) rs.getObject("event_id"),
+                rs.getInt("user_id"),
+                rs.getInt("resource_id"),
+                toLocalDateTime(rs.getTimestamp("start_time")),
+                toLocalDateTime(rs.getTimestamp("end_time")),
+                rs.getString("status"),
+                toLocalDateTime(rs.getTimestamp("created_at"))
+        ), id);
+        return bookings.isEmpty() ? null : bookings.get(0);
+    }
+
+    public void updateStatus(int id, String status) {
+        String sql = "UPDATE bookings SET status = ? WHERE id = ?";
+        jdbc.update(sql, status, id);
+    }
+
     private static LocalDateTime toLocalDateTime(Timestamp ts) {
         return ts == null ? null : ts.toLocalDateTime();
     }
