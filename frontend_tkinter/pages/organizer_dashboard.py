@@ -22,6 +22,12 @@ class OrganizerDashboard(tk.Frame):
         self.my_events = []
         self.event_registrations = {}
         self.resource_requests = []
+        
+        # Auto-refresh tracking
+        self.auto_refresh_enabled = True
+        self.auto_refresh_interval = 30000  # 30 seconds
+        self.refresh_timer = None
+        self.current_view = 'dashboard'
 
         # Layout: 1 row, 2 columns (sidebar, main)
         self.grid_rowconfigure(0, weight=1)
@@ -33,6 +39,9 @@ class OrganizerDashboard(tk.Frame):
 
         # Initial content
         self._load_all_data_then(self._render_dashboard)
+        
+        # Start auto-refresh
+        self._start_auto_refresh()
 
     # Sidebar
     def _build_sidebar(self):
@@ -206,6 +215,72 @@ class OrganizerDashboard(tk.Frame):
 
         threading.Thread(target=worker, daemon=True).start()
 
+    # Auto-refresh methods
+    def _start_auto_refresh(self):
+        """Start automatic refresh of data every 30 seconds"""
+        if self.auto_refresh_enabled:
+            self._schedule_refresh()
+    
+    def _schedule_refresh(self):
+        """Schedule the next refresh"""
+        if self.refresh_timer:
+            self.after_cancel(self.refresh_timer)
+        self.refresh_timer = self.after(self.auto_refresh_interval, self._auto_refresh)
+    
+    def _auto_refresh(self):
+        """Auto-refresh data in background"""
+        if not self.auto_refresh_enabled:
+            return
+        
+        def worker():
+            try:
+                # Silently refresh my events
+                all_events = self.api.get('events') or []
+                user_data = self.session.get_user()
+                user_id = user_data.get('id') or user_data.get('user_id') if user_data else None
+                
+                if user_id:
+                    self.my_events = [
+                        event for event in all_events 
+                        if event.get('organizerId') == user_id or event.get('organizer_id') == user_id
+                    ]
+                    
+                # Refresh view if needed (but NOT when user is creating an event)
+                if self.current_view == 'dashboard':
+                    self.after(0, self._render_dashboard)
+                elif self.current_view == 'my_events':
+                    self.after(0, self._render_my_events)
+                # Do NOT auto-refresh when on create_event, event_registrations, book_resources, etc.
+                # to avoid interrupting user input
+                    
+            except Exception:
+                pass  # Fail silently for background refresh
+            
+            # Schedule next refresh
+            self.after(0, self._schedule_refresh)
+        
+        threading.Thread(target=worker, daemon=True).start()
+    
+    def _manual_refresh(self):
+        """Manual refresh triggered by user"""
+        self._load_all_data_then(lambda: None)
+        # Re-render current view
+        if self.current_view == 'dashboard':
+            self._render_dashboard()
+        elif self.current_view == 'my_events':
+            self._render_my_events()
+    
+    def _stop_auto_refresh(self):
+        """Stop auto-refresh (call this when dashboard is destroyed)"""
+        self.auto_refresh_enabled = False
+        if self.refresh_timer:
+            self.after_cancel(self.refresh_timer)
+    
+    def destroy(self):
+        """Override destroy to stop auto-refresh"""
+        self._stop_auto_refresh()
+        super().destroy()
+
     # Views
     def _clear_content(self):
         for w in self.content.winfo_children():
@@ -218,8 +293,18 @@ class OrganizerDashboard(tk.Frame):
         tk.Label(bar, text=text, bg='#FEF3C7', fg='#92400E').pack(side='left', padx=8, pady=6)
 
     def _render_dashboard(self):
+        self.current_view = 'dashboard'
         self._clear_content()
         colors = self.controller.colors
+        
+        # Add refresh button at top
+        top_bar = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
+        top_bar.pack(fill='x', padx=16, pady=(12, 0))
+        tk.Label(top_bar, text='Organizer Dashboard', bg=self.controller.colors.get('background', '#ECF0F1'), 
+                font=('Helvetica', 16, 'bold'), fg=colors.get('primary', '#2C3E50')).pack(side='left')
+        
+        refresh_btn = create_secondary_button(top_bar, '🔄 Refresh', self._manual_refresh, width=100)
+        refresh_btn.pack(side='right')
 
         # Stats cards
         stats = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
@@ -320,7 +405,15 @@ class OrganizerDashboard(tk.Frame):
                 venue = ev.get('venue') or 'N/A'
                 status = (ev.get('status') or 'pending').title()
                 event_id = ev.get('id')
-                reg_count = len(self.event_registrations.get(event_id, []))
+                
+                # Handle both dict and list response formats for registration count
+                registrations_data = self.event_registrations.get(event_id, [])
+                if isinstance(registrations_data, dict):
+                    reg_count = registrations_data.get('count', 0)
+                elif isinstance(registrations_data, list):
+                    reg_count = len(registrations_data)
+                else:
+                    reg_count = 0
                 
                 # Status color
                 status_colors = {
@@ -337,6 +430,7 @@ class OrganizerDashboard(tk.Frame):
                 tk.Label(row, text=f'{reg_count} attendees', bg='white', fg='#6B7280').grid(row=0, column=4, sticky='w', padx=8)
 
     def _render_create_event(self):
+        self.current_view = 'create_event'
         self._clear_content()
         colors = self.controller.colors
         
@@ -449,11 +543,16 @@ class OrganizerDashboard(tk.Frame):
         cancel_btn.pack(side='left', padx=(8, 0))
 
     def _render_my_events(self):
+        self.current_view = 'my_events'
         self._clear_content()
         
-        # Header with event count
+        # Header with event count and refresh button
         header_frame = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
         header_frame.pack(fill='x', padx=16, pady=(16, 8))
+        
+        # Add refresh button
+        refresh_btn = create_secondary_button(header_frame, '🔄 Refresh', self._manual_refresh, width=100)
+        refresh_btn.pack(side='right')
         
         tk.Label(
             header_frame, 
@@ -481,6 +580,7 @@ class OrganizerDashboard(tk.Frame):
             self._render_events_table(self.my_events, show_actions=True)
 
     def _render_event_registrations(self):
+        self.current_view = 'event_registrations'
         self._clear_content()
         tk.Label(self.content, text='Event Registrations', bg=self.controller.colors.get('background', '#ECF0F1'), 
                 fg='#1F2937', font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
@@ -488,7 +588,19 @@ class OrganizerDashboard(tk.Frame):
         # Show registrations grouped by event
         for event in self.my_events:
             event_id = event.get('id')
-            registrations = self.event_registrations.get(event_id, [])
+            registrations_data = self.event_registrations.get(event_id, [])
+            
+            # Handle both dict and list response formats
+            # Backend returns: {'count': X, 'registrations': [...]}
+            if isinstance(registrations_data, dict):
+                reg_count = registrations_data.get('count', 0)
+                registrations = registrations_data.get('registrations', [])
+            elif isinstance(registrations_data, list):
+                registrations = registrations_data
+                reg_count = len(registrations)
+            else:
+                registrations = []
+                reg_count = 0
             
             event_frame = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
             event_frame.pack(fill='x', padx=16, pady=(0, 12))
@@ -498,7 +610,7 @@ class OrganizerDashboard(tk.Frame):
             header.pack(fill='x')
             tk.Label(header, text=event.get('title', 'Untitled'), bg='#F9FAFB', fg='#1F2937', 
                     font=('Helvetica', 12, 'bold')).pack(side='left', padx=12, pady=8)
-            tk.Label(header, text=f'{len(registrations)} registrations', bg='#F9FAFB', fg='#1F2937').pack(side='right', padx=12, pady=8)
+            tk.Label(header, text=f'{reg_count} registrations', bg='#F9FAFB', fg='#1F2937').pack(side='right', padx=12, pady=8)
             
             # Registrations list
             if not registrations:
@@ -526,6 +638,7 @@ class OrganizerDashboard(tk.Frame):
         self.controller.navigate('my_bookings')
 
     def _render_resource_requests(self):
+        self.current_view = 'resource_requests'
         self._clear_content()
         tk.Label(self.content, text='Resource Requests', bg=self.controller.colors.get('background', '#ECF0F1'), 
                 fg='#1F2937', font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
@@ -565,6 +678,7 @@ class OrganizerDashboard(tk.Frame):
             tv.pack(fill='both', expand=True, padx=4, pady=4)
 
     def _render_analytics(self):
+        self.current_view = 'analytics'
         self._clear_content()
         colors = self.controller.colors
         
@@ -576,7 +690,15 @@ class OrganizerDashboard(tk.Frame):
         
         # Calculate analytics
         total_events = len(self.my_events)
-        total_registrations = sum(len(regs) for regs in self.event_registrations.values())
+        
+        # Calculate total registrations handling both dict and list formats
+        total_registrations = 0
+        for regs_data in self.event_registrations.values():
+            if isinstance(regs_data, dict):
+                total_registrations += regs_data.get('count', 0)
+            elif isinstance(regs_data, list):
+                total_registrations += len(regs_data)
+        
         avg_registrations = total_registrations / total_events if total_events > 0 else 0
         
         stats_container = tk.Frame(analytics_frame, bg='white')
@@ -604,6 +726,7 @@ class OrganizerDashboard(tk.Frame):
                 fg='#1F2937', font=('Helvetica', 12)).pack(pady=40)
 
     def _render_profile(self):
+        self.current_view = 'profile'
         self._clear_content()
         tk.Label(self.content, text='Profile Settings', bg=self.controller.colors.get('background', '#ECF0F1'), 
                 fg='#1F2937', font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
@@ -718,15 +841,61 @@ class OrganizerDashboard(tk.Frame):
             messagebox.showerror('Error', 'Event not found')
             return
         
-        registrations = self.event_registrations.get(event_id, [])
+        # CRITICAL FIX: Always fetch FRESH registration data from API
+        # Don't rely on cached data which may be stale
+        try:
+            registrations_response = self.api.get(f'events/{event_id}/registrations')
+            # Backend returns: {'count': X, 'registrations': [...]}
+            if isinstance(registrations_response, dict):
+                reg_count = registrations_response.get('count', 0)
+                reg_list = registrations_response.get('registrations', [])
+            elif isinstance(registrations_response, list):
+                reg_list = registrations_response
+                reg_count = len(reg_list)
+            else:
+                reg_count = 0
+                reg_list = []
+            
+            # Update cache with fresh data
+            self.event_registrations[event_id] = registrations_response
+        except Exception as e:
+            # Fallback to cached data if API fails
+            registrations = self.event_registrations.get(event_id, [])
+            if isinstance(registrations, dict):
+                reg_count = registrations.get('count', 0)
+                reg_list = registrations.get('registrations', [])
+            elif isinstance(registrations, list):
+                reg_list = registrations
+                reg_count = len(reg_list)
+            else:
+                reg_count = 0
+                reg_list = []
+        
+        # Format datetime fields (backend sends camelCase: startTime, endTime)
+        start_time = event.get('startTime', 'N/A')
+        end_time = event.get('endTime', 'N/A')
+        
+        # Format dates if present
+        if start_time != 'N/A':
+            try:
+                # Backend sends ISO format: 2025-11-20T09:00:00
+                start_time = start_time.replace('T', ' ') if 'T' in start_time else start_time
+            except:
+                pass
+        
+        if end_time != 'N/A':
+            try:
+                end_time = end_time.replace('T', ' ') if 'T' in end_time else end_time
+            except:
+                pass
         
         details = f"Event: {event.get('title', 'Untitled')}\n"
         details += f"Description: {event.get('description', 'N/A')}\n"
-        details += f"Start: {event.get('start_time', 'N/A')}\n"
-        details += f"End: {event.get('end_time', 'N/A')}\n"
+        details += f"Start: {start_time}\n"
+        details += f"End: {end_time}\n"
         details += f"Venue: {event.get('venue', 'N/A')}\n"
         details += f"Status: {event.get('status', 'N/A')}\n"
-        details += f"Registrations: {len(registrations)}"
+        details += f"Registrations: {reg_count}"
         
         messagebox.showinfo('Event Details', details)
 
@@ -737,15 +906,180 @@ class OrganizerDashboard(tk.Frame):
             messagebox.showerror('Error', 'Event not found')
             return
         
-        messagebox.showinfo(
-            'Edit Event',
-            f"Edit functionality for '{event.get('title')}' coming soon!\n\n"
-            f"This will allow you to modify:\n"
-            f"• Event title and description\n"
-            f"• Date and time\n"
-            f"• Venue\n"
-            f"• Event status"
-        )
+        # Create edit modal
+        edit_window = tk.Toplevel(self)
+        edit_window.title(f"Edit Event: {event.get('title', 'Untitled')}")
+        edit_window.geometry('600x700')
+        edit_window.transient(self)
+        edit_window.grab_set()
+        
+        # Main container
+        main_frame = tk.Frame(edit_window, bg='white', padx=30, pady=30)
+        main_frame.pack(fill='both', expand=True)
+        
+        tk.Label(main_frame, text=f"Edit Event", 
+                bg='white', fg='#1F2937', font=('Helvetica', 18, 'bold')).pack(anchor='w', pady=(0, 5))
+        
+        tk.Label(main_frame, text="After editing, event will be sent for admin re-approval", 
+                bg='white', fg='#F59E0B', font=('Helvetica', 10)).pack(anchor='w', pady=(0, 20))
+        
+        # Title
+        tk.Label(main_frame, text='Event Title *', bg='white', fg='#374151', 
+                font=('Helvetica', 10, 'bold')).pack(anchor='w', pady=(0, 5))
+        title_entry = tk.Entry(main_frame, font=('Helvetica', 12), width=50)
+        title_entry.insert(0, event.get('title', ''))
+        title_entry.pack(fill='x', pady=(0, 15))
+        
+        # Description
+        tk.Label(main_frame, text='Description *', bg='white', fg='#374151',
+                font=('Helvetica', 10, 'bold')).pack(anchor='w', pady=(0, 5))
+        desc_text = tk.Text(main_frame, font=('Helvetica', 11), height=6, wrap='word')
+        desc_text.insert('1.0', event.get('description', ''))
+        desc_text.pack(fill='x', pady=(0, 15))
+        
+        # Venue
+        tk.Label(main_frame, text='Venue *', bg='white', fg='#374151',
+                font=('Helvetica', 10, 'bold')).pack(anchor='w', pady=(0, 5))
+        venue_entry = tk.Entry(main_frame, font=('Helvetica', 12), width=50)
+        venue_entry.insert(0, event.get('venue', ''))
+        venue_entry.pack(fill='x', pady=(0, 15))
+        
+        # Extract and parse existing dates
+        start_time_str = event.get('startTime', '')
+        end_time_str = event.get('endTime', '')
+        
+        # Parse existing datetime (format: 2025-11-20T09:00:00)
+        from datetime import datetime
+        try:
+            if start_time_str and 'T' in start_time_str:
+                start_dt = datetime.fromisoformat(start_time_str)
+                start_date_val = start_dt.strftime('%Y-%m-%d')
+                start_time_val = start_dt.strftime('%H:%M')
+            else:
+                start_date_val = ''
+                start_time_val = '09:00'
+        except:
+            start_date_val = ''
+            start_time_val = '09:00'
+        
+        try:
+            if end_time_str and 'T' in end_time_str:
+                end_dt = datetime.fromisoformat(end_time_str)
+                end_date_val = end_dt.strftime('%Y-%m-%d')
+                end_time_val = end_dt.strftime('%H:%M')
+            else:
+                end_date_val = ''
+                end_time_val = '17:00'
+        except:
+            end_date_val = ''
+            end_time_val = '17:00'
+        
+        # Start Date
+        tk.Label(main_frame, text='Start Date *', bg='white', fg='#374151',
+                font=('Helvetica', 10, 'bold')).pack(anchor='w', pady=(0, 5))
+        start_date_entry = tk.Entry(main_frame, font=('Helvetica', 12), width=50)
+        start_date_entry.insert(0, start_date_val)
+        start_date_entry.pack(fill='x', pady=(0, 5))
+        tk.Label(main_frame, text='Format: YYYY-MM-DD', bg='white', fg='#6B7280',
+                font=('Helvetica', 9)).pack(anchor='w', pady=(0, 15))
+        
+        # Start Time
+        tk.Label(main_frame, text='Start Time *', bg='white', fg='#374151',
+                font=('Helvetica', 10, 'bold')).pack(anchor='w', pady=(0, 5))
+        start_time_entry = tk.Entry(main_frame, font=('Helvetica', 12), width=50)
+        start_time_entry.insert(0, start_time_val)
+        start_time_entry.pack(fill='x', pady=(0, 5))
+        tk.Label(main_frame, text='Format: HH:MM (24-hour)', bg='white', fg='#6B7280',
+                font=('Helvetica', 9)).pack(anchor='w', pady=(0, 15))
+        
+        # End Date
+        tk.Label(main_frame, text='End Date *', bg='white', fg='#374151',
+                font=('Helvetica', 10, 'bold')).pack(anchor='w', pady=(0, 5))
+        end_date_entry = tk.Entry(main_frame, font=('Helvetica', 12), width=50)
+        end_date_entry.insert(0, end_date_val)
+        end_date_entry.pack(fill='x', pady=(0, 5))
+        tk.Label(main_frame, text='Format: YYYY-MM-DD', bg='white', fg='#6B7280',
+                font=('Helvetica', 9)).pack(anchor='w', pady=(0, 15))
+        
+        # End Time
+        tk.Label(main_frame, text='End Time *', bg='white', fg='#374151',
+                font=('Helvetica', 10, 'bold')).pack(anchor='w', pady=(0, 5))
+        end_time_entry = tk.Entry(main_frame, font=('Helvetica', 12), width=50)
+        end_time_entry.insert(0, end_time_val)
+        end_time_entry.pack(fill='x', pady=(0, 5))
+        tk.Label(main_frame, text='Format: HH:MM (24-hour)', bg='white', fg='#6B7280',
+                font=('Helvetica', 9)).pack(anchor='w', pady=(0, 20))
+        
+        # Buttons
+        button_frame = tk.Frame(main_frame, bg='white')
+        button_frame.pack(fill='x', pady=(10, 0))
+        
+        def submit_edit():
+            # Get values
+            title = title_entry.get().strip()
+            description = desc_text.get('1.0', 'end-1c').strip()
+            venue = venue_entry.get().strip()
+            start_date = start_date_entry.get().strip()
+            start_time = start_time_entry.get().strip()
+            end_date = end_date_entry.get().strip()
+            end_time = end_time_entry.get().strip()
+            
+            # Validation
+            if not title or len(title) < 3:
+                messagebox.showerror('Validation Error', 'Title must be at least 3 characters')
+                return
+            
+            if not description or len(description) < 10:
+                messagebox.showerror('Validation Error', 'Description must be at least 10 characters')
+                return
+            
+            if not venue:
+                messagebox.showerror('Validation Error', 'Venue is required')
+                return
+            
+            # Combine date and time
+            try:
+                start_datetime = f"{start_date}T{start_time}:00"
+                end_datetime = f"{end_date}T{end_time}:00"
+                
+                # Validate datetime format
+                datetime.fromisoformat(start_datetime)
+                datetime.fromisoformat(end_datetime)
+            except ValueError:
+                messagebox.showerror('Validation Error', 'Invalid date/time format')
+                return
+            
+            # Prepare payload
+            user_data = self.session.get_user()
+            organizer_id = user_data.get('id') or user_data.get('user_id') if user_data else None
+            
+            payload = {
+                'title': title,
+                'description': description,
+                'organizerId': organizer_id,
+                'startTime': start_datetime,
+                'endTime': end_datetime,
+                'venue': venue
+            }
+            
+            try:
+                # Call PUT endpoint to update event
+                response = self.api.put(f'events/{event_id}', payload)
+                messagebox.showinfo('Success', 
+                    f"Event '{title}' updated successfully!\n\n"
+                    f"Status: Pending (requires admin re-approval)")
+                edit_window.destroy()
+                # Reload data
+                self._load_all_data_then(self._render_my_events)
+            except Exception as e:
+                messagebox.showerror('Error', f'Failed to update event:\n\n{str(e)}')
+        
+        # Create canvas buttons for macOS compatibility
+        cancel_btn = create_secondary_button(button_frame, 'Cancel', edit_window.destroy, width=100, height=40)
+        cancel_btn.pack(side='left', padx=(0, 10))
+        
+        save_btn = create_primary_button(button_frame, 'Save Changes', submit_edit, width=140, height=40)
+        save_btn.pack(side='left')
 
     def _delete_event(self, event_id):
         """Delete an event with confirmation"""
@@ -850,7 +1184,16 @@ class OrganizerDashboard(tk.Frame):
         
         for event in self.my_events:
             event_id = event.get('id')
-            reg_count = len(self.event_registrations.get(event_id, []))
+            
+            # Handle both dict and list response formats for registration count
+            registrations_data = self.event_registrations.get(event_id, [])
+            if isinstance(registrations_data, dict):
+                reg_count = registrations_data.get('count', 0)
+            elif isinstance(registrations_data, list):
+                reg_count = len(registrations_data)
+            else:
+                reg_count = 0
+            
             if reg_count > max_regs:
                 max_regs = reg_count
                 popular_event = event.get('title', 'Untitled')

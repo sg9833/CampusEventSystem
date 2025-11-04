@@ -6,7 +6,7 @@ from datetime import datetime
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
 from utils.button_styles import ButtonStyles
-from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_danger_button
+from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_danger_button, bind_mousewheel
 
 
 class StudentDashboard(tk.Frame):
@@ -22,6 +22,12 @@ class StudentDashboard(tk.Frame):
         self.events = []
         self.my_bookings = []
         self.registered_events = []
+        
+        # Auto-refresh tracking
+        self.auto_refresh_enabled = True
+        self.auto_refresh_interval = 30000  # 30 seconds
+        self.refresh_timer = None
+        self.current_view = 'dashboard'
 
         # Layout: 1 row, 2 columns (sidebar, main)
         self.grid_rowconfigure(0, weight=1)
@@ -33,6 +39,9 @@ class StudentDashboard(tk.Frame):
 
         # Initial content
         self._load_all_data_then(self._render_dashboard)
+        
+        # Start auto-refresh
+        self._start_auto_refresh()
 
     # Sidebar
     def _build_sidebar(self):
@@ -138,6 +147,9 @@ class StudentDashboard(tk.Frame):
         self.content = tk.Frame(canvas, bg=self.controller.colors.get('background', '#ECF0F1'))
         canvas.create_window((0, 0), window=self.content, anchor='nw')
         self.content.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        
+        # Enable mousewheel/trackpad scrolling
+        bind_mousewheel(canvas, self.content)
 
         # Spinner
         self.spinner = ttk.Progressbar(self.content, mode='indeterminate')
@@ -177,6 +189,64 @@ class StudentDashboard(tk.Frame):
 
         threading.Thread(target=worker, daemon=True).start()
 
+    # Auto-refresh methods
+    def _start_auto_refresh(self):
+        """Start automatic refresh of data every 30 seconds"""
+        if self.auto_refresh_enabled:
+            self._schedule_refresh()
+    
+    def _schedule_refresh(self):
+        """Schedule the next refresh"""
+        if self.refresh_timer:
+            self.after_cancel(self.refresh_timer)
+        self.refresh_timer = self.after(self.auto_refresh_interval, self._auto_refresh)
+    
+    def _auto_refresh(self):
+        """Auto-refresh data in background"""
+        if not self.auto_refresh_enabled:
+            return
+        
+        def worker():
+            try:
+                # Silently refresh events
+                self.events = self.api.get('events') or []
+                # Refresh registered events
+                self.registered_events = self.api.get('events/registered') or []
+                    
+                # Refresh view if on dashboard or browse events
+                if self.current_view in ['dashboard', 'browse_events']:
+                    self.after(0, self._update_views)
+                    
+            except Exception:
+                pass  # Fail silently for background refresh
+            
+            # Schedule next refresh
+            self.after(0, self._schedule_refresh)
+        
+        threading.Thread(target=worker, daemon=True).start()
+    
+    def _update_views(self):
+        """Update current view after background refresh"""
+        if self.current_view == 'dashboard':
+            self._render_dashboard()
+        elif self.current_view == 'browse_events':
+            self._render_browse_events()
+    
+    def _manual_refresh(self):
+        """Manual refresh triggered by user"""
+        self._load_all_data_then(self._update_views)
+    
+    def _stop_auto_refresh(self):
+        """Stop auto-refresh (call this when dashboard is destroyed)"""
+        self.auto_refresh_enabled = False
+        if self.refresh_timer:
+            self.after_cancel(self.refresh_timer)
+    
+    def destroy(self):
+        """Override destroy to stop auto-refresh"""
+        self._stop_auto_refresh()
+        super().destroy()
+
     # Views
     def _clear_content(self):
         for w in self.content.winfo_children():
@@ -189,13 +259,23 @@ class StudentDashboard(tk.Frame):
         tk.Label(bar, text=text, bg='#FEF3C7', fg='#92400E').pack(side='left', padx=8, pady=6)
 
     def _render_dashboard(self):
+        self.current_view = 'dashboard'
         self._clear_content()
         colors = self.controller.colors
+        
+        # Add refresh button at top
+        top_bar = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
+        top_bar.pack(fill='x', padx=16, pady=(12, 0))
+        tk.Label(top_bar, text='Student Dashboard', bg=self.controller.colors.get('background', '#ECF0F1'), 
+                font=('Helvetica', 16, 'bold'), fg=colors.get('primary', '#2C3E50')).pack(side='left')
+        
+        refresh_btn = create_secondary_button(top_bar, '🔄 Refresh', self._manual_refresh, width=100)
+        refresh_btn.pack(side='right')
 
-        # Stats cards
+        # Stats cards (removed Active Bookings - students can't book resources)
         stats = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
         stats.pack(fill='x', padx=16, pady=(16, 8))
-        for i in range(3):
+        for i in range(2):
             stats.grid_columnconfigure(i, weight=1)
 
         def card(parent, title, value, color):
@@ -206,14 +286,11 @@ class StudentDashboard(tk.Frame):
 
         total_events = len(self.events)
         registered = len(self.registered_events)
-        active_bookings = len([b for b in self.my_bookings if (b.get('status') or '').lower() in ('active', 'approved', 'pending')])
 
         c1 = card(stats, 'Total Events', total_events, colors.get('secondary', '#3498DB'))
         c2 = card(stats, 'Registered Events', registered, colors.get('success', '#27AE60'))
-        c3 = card(stats, 'Active Bookings', active_bookings, colors.get('primary', '#2C3E50'))
         c1.grid(row=0, column=0, sticky='ew', padx=(0, 8))
-        c2.grid(row=0, column=1, sticky='ew', padx=8)
-        c3.grid(row=0, column=2, sticky='ew', padx=(8, 0))
+        c2.grid(row=0, column=1, sticky='ew', padx=(8, 0))
 
         # Upcoming events (next 5)
         upc = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
@@ -260,14 +337,15 @@ class StudentDashboard(tk.Frame):
                 tk.Label(row, text=ts, bg='white', fg='#9CA3AF').pack(side='right')
 
     def _render_browse_events(self):
+        self.current_view = 'browse_events'
         self._clear_content()
         tk.Label(self.content, text='Browse Events', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
-        self._render_events_table(self.events)
+        self._render_events_table(self.events, show_register_button=True)
 
     def _render_my_registrations(self):
         self._clear_content()
         tk.Label(self.content, text='My Registrations', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
-        self._render_events_table(self.registered_events)
+        self._render_events_table(self.registered_events, show_register_button=False)
 
     # My Bookings removed - students cannot book resources
     # def _render_my_bookings(self):
@@ -291,30 +369,64 @@ class StudentDashboard(tk.Frame):
         """Navigate to profile page"""
         self.controller.navigate('profile')
 
-    def _render_events_table(self, events):
-        cols = ('title', 'start_time', 'venue', 'actions')
+    def _render_events_table(self, events, show_register_button=True):
+        """
+        Render events table with proper column alignment.
+        
+        Args:
+            events: List of event dictionaries
+            show_register_button: If True, shows Register button (for Browse Events).
+                                 If False, no button column (for My Registrations).
+        """
         frame = tk.Frame(self.content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
         frame.pack(fill='both', expand=True, padx=16, pady=(0, 16))
 
         # Header row
         header = tk.Frame(frame, bg='#F9FAFB')
         header.pack(fill='x')
-        for i, h in enumerate(['Title', 'Start Time', 'Venue', '']):
-            tk.Label(header, text=h, bg='#F9FAFB', fg='#374151', font=('Helvetica', 10, 'bold')).grid(row=0, column=i, sticky='w', padx=8, pady=8)
-            header.grid_columnconfigure(i, weight=1 if i == 0 else 0)
+        
+        # Define columns based on whether we show register button
+        if show_register_button:
+            columns = [('Title', 0), ('Start Time', 1), ('Venue', 2), ('', 3)]
+        else:
+            columns = [('Title', 0), ('Start Time', 1), ('Venue', 2)]
+        
+        for label, col_idx in columns:
+            tk.Label(header, text=label, bg='#F9FAFB', fg='#374151', font=('Helvetica', 10, 'bold')).grid(row=0, column=col_idx, sticky='w', padx=8, pady=8)
+            # Make title column expandable, others fixed width
+            if col_idx == 0:
+                header.grid_columnconfigure(col_idx, weight=1, minsize=200)
+            else:
+                header.grid_columnconfigure(col_idx, weight=0, minsize=150)
 
         # Rows
         if not events:
-            tk.Label(frame, text='No items', bg='white', fg='#6B7280').pack(padx=12, pady=12)
+            tk.Label(frame, text='No events found', bg='white', fg='#6B7280').pack(padx=12, pady=12)
         else:
             for e in events:
                 row = tk.Frame(frame, bg='white')
                 row.pack(fill='x', padx=4, pady=2)
-                tk.Label(row, text=e.get('title') or 'Untitled', bg='white').grid(row=0, column=0, sticky='w', padx=8, pady=8)
-                tk.Label(row, text=e.get('start_time') or '', bg='white', fg='#6B7280').grid(row=0, column=1, sticky='w', padx=8)
-                tk.Label(row, text=e.get('venue') or '', bg='white', fg='#6B7280').grid(row=0, column=2, sticky='w', padx=8)
-                reg_btn = create_success_button(row, 'Register', lambda ev=e: self._register_event(ev), width=90, height=30)
-                reg_btn.grid(row=0, column=3, padx=8)
+                
+                # Configure row grid columns to match header
+                for col_idx in range(len(columns)):
+                    if col_idx == 0:
+                        row.grid_columnconfigure(col_idx, weight=1, minsize=200)
+                    else:
+                        row.grid_columnconfigure(col_idx, weight=0, minsize=150)
+                
+                # Title column
+                tk.Label(row, text=e.get('title') or 'Untitled', bg='white', font=('Helvetica', 10)).grid(row=0, column=0, sticky='w', padx=8, pady=8)
+                
+                # Start Time column
+                tk.Label(row, text=e.get('start_time') or 'TBD', bg='white', fg='#6B7280', font=('Helvetica', 10)).grid(row=0, column=1, sticky='w', padx=8, pady=8)
+                
+                # Venue column
+                tk.Label(row, text=e.get('venue') or 'TBD', bg='white', fg='#6B7280', font=('Helvetica', 10)).grid(row=0, column=2, sticky='w', padx=8, pady=8)
+                
+                # Register button column (only for Browse Events)
+                if show_register_button:
+                    reg_btn = create_success_button(row, 'Register', lambda ev=e: self._register_event(ev), width=90, height=30)
+                    reg_btn.grid(row=0, column=3, padx=8, pady=4)
 
     # Actions
     def _register_event(self, event):

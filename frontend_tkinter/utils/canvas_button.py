@@ -302,3 +302,53 @@ def create_icon_button(parent, icon, command=None, size=40, variant='secondary',
     """
     return create_canvas_button(parent, icon, command, variant, size, size, 
                                 font=('Arial', 14), **kwargs)
+
+
+def bind_mousewheel(canvas, content_frame=None):
+    """
+    Bind mousewheel/trackpad scrolling to a canvas widget for macOS and Windows.
+    This enables two-finger swipe scrolling on macOS trackpads.
+    
+    Args:
+        canvas: tk.Canvas widget to bind scrolling to
+        content_frame: Optional frame inside canvas for additional binding
+    
+    Example:
+        canvas = tk.Canvas(parent)
+        scrollbar = ttk.Scrollbar(parent, command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        content = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=content, anchor='nw')
+        
+        bind_mousewheel(canvas, content)
+    """
+    def _on_mousewheel(event):
+        """Handle mousewheel scrolling - works for both macOS and Windows"""
+        # macOS and Windows have different delta values
+        # macOS: event.delta is positive for up, negative for down
+        # Windows: event.delta is in multiples of 120
+        if event.delta:
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+    
+    def _on_enter(event):
+        """Bind mousewheel when mouse enters canvas"""
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        # Also bind for Linux
+        canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+        canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+    
+    def _on_leave(event):
+        """Unbind mousewheel when mouse leaves canvas"""
+        canvas.unbind_all("<MouseWheel>")
+        canvas.unbind_all("<Button-4>")
+        canvas.unbind_all("<Button-5>")
+    
+    # Bind to canvas
+    canvas.bind("<Enter>", _on_enter)
+    canvas.bind("<Leave>", _on_leave)
+    
+    # Also bind to content frame if provided
+    if content_frame:
+        content_frame.bind("<Enter>", _on_enter)
+        content_frame.bind("<Leave>", _on_leave)

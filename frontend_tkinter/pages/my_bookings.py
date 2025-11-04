@@ -36,12 +36,85 @@ class MyBookingsPage(tk.Frame):
         self.current_month = datetime.now().month
         self.current_year = datetime.now().year
         
-        # Layout
-        self.grid_rowconfigure(0, weight=1)
+        # Layout - Row 1 should expand, not row 0
+        self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
         
         self._build_ui()
         self._load_bookings()
+
+    def _create_tab_button(self, parent, text, status):
+        """Create a custom tab button using Canvas for macOS compatibility"""
+        canvas_width = 160
+        canvas_height = 44
+        
+        canvas = tk.Canvas(parent, width=canvas_width, height=canvas_height, 
+                          bg='white', highlightthickness=0, cursor='hand2')
+        canvas.pack()
+        
+        # Store status for later use
+        canvas.tab_status = status
+        canvas.tab_text = text
+        
+        # Draw initial state (inactive)
+        self._draw_tab_button(canvas, active=False)
+        
+        # Bind click event
+        canvas.bind('<Button-1>', lambda e: self._switch_tab(status))
+        
+        # Hover effects
+        canvas.bind('<Enter>', lambda e: self._on_tab_hover(canvas, True))
+        canvas.bind('<Leave>', lambda e: self._on_tab_hover(canvas, False))
+        
+        return canvas
+    
+    def _draw_tab_button(self, canvas, active=False):
+        """Draw the tab button on canvas"""
+        canvas.delete('all')
+        
+        width = canvas.winfo_reqwidth()
+        height = canvas.winfo_reqheight()
+        
+        # Colors based on state
+        if active:
+            bg_color = self.colors.get('secondary', '#3498DB')
+            text_color = 'white'
+            font_weight = 'bold'
+        else:
+            bg_color = 'white'
+            text_color = '#1F2937'
+            font_weight = 'normal'
+        
+        # Draw background
+        canvas.create_rectangle(0, 0, width, height, fill=bg_color, outline='')
+        
+        # Draw text
+        canvas.create_text(width // 2, height // 2, 
+                          text=canvas.tab_text, 
+                          fill=text_color, 
+                          font=('Helvetica', 11, font_weight))
+        
+        # Store current state
+        canvas.is_active = active
+    
+    def _on_tab_hover(self, canvas, entering):
+        """Handle tab button hover"""
+        if hasattr(canvas, 'is_active') and canvas.is_active:
+            return  # Don't change hover state for active tab
+        
+        if entering:
+            # Slight hover effect
+            canvas.delete('all')
+            width = canvas.winfo_reqwidth()
+            height = canvas.winfo_reqheight()
+            canvas.create_rectangle(0, 0, width, height, fill='#F9FAFB', outline='')
+            canvas.create_text(width // 2, height // 2, 
+                              text=canvas.tab_text, 
+                              fill='#1F2937', 
+                              font=('Helvetica', 11))
+        else:
+            # Redraw inactive state
+            self._draw_tab_button(canvas, active=False)
 
     def _build_ui(self):
         """Build the main UI"""
@@ -73,7 +146,7 @@ class MyBookingsPage(tk.Frame):
         # Content container
         content_container = tk.Frame(self, bg=self.colors.get('background', '#ECF0F1'))
         content_container.grid(row=1, column=0, sticky='nsew')
-        content_container.grid_rowconfigure(0, weight=1)
+        content_container.grid_rowconfigure(1, weight=1)  # Row 1 (content_area) should expand, not row 0 (tabs)
         content_container.grid_columnconfigure(0, weight=1)
         
         # Tab navigation
@@ -89,8 +162,12 @@ class MyBookingsPage(tk.Frame):
         
         self.tab_buttons = {}
         for status, label, color in tabs:
-            btn = tk.Button(tab_nav, text=label, command=lambda s=status: self._switch_tab(s), bg='white', fg='#1F2937', relief='flat', font=('Helvetica', 11), padx=20, pady=12, cursor='hand2')
-            btn.pack(side='left')
+            # Create canvas-based button for macOS compatibility
+            btn_container = tk.Frame(tab_nav, bg='white')
+            btn_container.pack(side='left', padx=2)
+            
+            # We'll use a custom tab button that can change colors
+            btn = self._create_tab_button(btn_container, label, status)
             self.tab_buttons[status] = btn
         
         # Content area (will contain either list or calendar view)
@@ -212,18 +289,22 @@ class MyBookingsPage(tk.Frame):
             for weekday in range(7):
                 if week_num == 0 and weekday < start_weekday:
                     # Empty cell before month starts
-                    tk.Frame(week_row, bg='#F9FAFB', width=15, height=100).pack(side='left', padx=1)
+                    empty_cell = tk.Frame(week_row, bg='#F9FAFB', height=100)
+                    empty_cell.pack(side='left', padx=1, fill='both', expand=True)
+                    empty_cell.pack_propagate(False)  # Enforce fixed height
                 elif day_num > last_day_num:
                     # Empty cell after month ends
-                    tk.Frame(week_row, bg='#F9FAFB', width=15, height=100).pack(side='left', padx=1)
+                    empty_cell = tk.Frame(week_row, bg='#F9FAFB', height=100)
+                    empty_cell.pack(side='left', padx=1, fill='both', expand=True)
+                    empty_cell.pack_propagate(False)  # Enforce fixed height
                 else:
                     # Day cell
                     cell_date = datetime(self.current_year, self.current_month, day_num).date()
                     is_today = cell_date == current_date
                     
-                    cell = tk.Frame(week_row, bg='#FFFFFF' if not is_today else '#E0E7FF', highlightthickness=1, highlightbackground='#DBEAFE' if is_today else '#E5E7EB', width=15, height=100)
+                    cell = tk.Frame(week_row, bg='#FFFFFF' if not is_today else '#E0E7FF', highlightthickness=1, highlightbackground='#DBEAFE' if is_today else '#E5E7EB', height=100)
                     cell.pack(side='left', padx=1, fill='both', expand=True)
-                    cell.pack_propagate(False)
+                    cell.pack_propagate(False)  # Enforce fixed height
                     
                     # Day number
                     day_header = tk.Frame(cell, bg='#FFFFFF' if not is_today else '#E0E7FF')
@@ -428,11 +509,9 @@ class MyBookingsPage(tk.Frame):
 
     def _update_active_tab(self):
         """Update active tab styling"""
-        for status, btn in self.tab_buttons.items():
-            if status == self.current_status:
-                btn.config(bg=self.colors.get('secondary', '#3498DB'), fg='white', font=('Helvetica', 11, 'bold'))
-            else:
-                btn.config(bg='white', fg='#1F2937', font=('Helvetica', 11))
+        for status, canvas in self.tab_buttons.items():
+            is_active = (status == self.current_status)
+            self._draw_tab_button(canvas, active=is_active)
 
     def _toggle_view(self):
         """Toggle between list and calendar view"""

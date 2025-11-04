@@ -52,6 +52,42 @@ class APIClient:
         """Set callback to handle authentication errors (401/403)"""
         self.on_auth_error_callback = callback
     
+    def _format_error_message(self, response):
+        """
+        Format error message from API response in a user-friendly way.
+        Parses JSON error responses and creates readable error messages.
+        """
+        try:
+            error_data = response.json()
+            
+            # Handle validation errors (400 Bad Request)
+            if response.status_code == 400 and error_data.get('status') == 'error':
+                message = error_data.get('message', 'Validation failed')
+                errors = error_data.get('errors', {})
+                
+                if errors:
+                    # Format field errors as bullet points
+                    error_list = '\n'.join([f"  • {field}: {msg}" for field, msg in errors.items()])
+                    return f"{message}:\n{error_list}"
+                else:
+                    return message
+            
+            # Handle other error responses with message field
+            elif 'message' in error_data:
+                return error_data['message']
+            
+            # Handle errors with 'error' field
+            elif 'error' in error_data:
+                return error_data['error']
+            
+            # Fallback: return the full response text
+            else:
+                return response.text
+                
+        except (ValueError, json.JSONDecodeError):
+            # If response is not JSON, return raw text
+            return f"HTTP {response.status_code}: {response.text}"
+    
     def _handle_auth_error(self, status_code: int):
         """Handle authentication/authorization errors"""
         self.clear_auth_token()
@@ -83,6 +119,7 @@ class APIClient:
     def get(self, endpoint, headers=None):
         """Make a GET request to the API"""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        response = None
         try:
             response = self.session.get(
                 url, 
@@ -101,8 +138,9 @@ class APIClient:
         except requests.ConnectionError:
             raise requests.ConnectionError("Failed to connect to the server")
         except requests.HTTPError as e:
-            if 'response' in locals():
-                raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            if response is not None:
+                error_message = self._format_error_message(response)
+                raise requests.HTTPError(error_message)
             else:
                 raise requests.HTTPError(f"HTTP error: {str(e)}")
         except requests.RequestException as e:
@@ -113,6 +151,7 @@ class APIClient:
     def post(self, endpoint, data=None, headers=None):
         """Make a POST request to the API"""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        response = None
         try:
             response = self.session.post(
                 url,
@@ -132,8 +171,9 @@ class APIClient:
         except requests.ConnectionError:
             raise requests.ConnectionError("Failed to connect to the server")
         except requests.HTTPError as e:
-            if 'response' in locals():
-                raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            if response is not None:
+                error_message = self._format_error_message(response)
+                raise requests.HTTPError(error_message)
             else:
                 raise requests.HTTPError(f"HTTP error: {str(e)}")
         except requests.RequestException as e:
@@ -144,6 +184,7 @@ class APIClient:
     def put(self, endpoint, data, headers=None):
         """Make a PUT request with JSON data"""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        response = None
         try:
             response = self.session.put(
                 url, 
@@ -163,8 +204,9 @@ class APIClient:
         except requests.ConnectionError:
             raise requests.ConnectionError("Failed to connect to the server")
         except requests.HTTPError as e:
-            if 'response' in locals():
-                raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            if response is not None:
+                error_message = self._format_error_message(response)
+                raise requests.HTTPError(error_message)
             else:
                 raise requests.HTTPError(f"HTTP error: {str(e)}")
         except requests.RequestException as e:
@@ -175,6 +217,7 @@ class APIClient:
     def delete(self, endpoint, headers=None):
         """Make a DELETE request"""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        response = None
         try:
             response = self.session.delete(
                 url, 
@@ -197,8 +240,9 @@ class APIClient:
         except requests.ConnectionError:
             raise requests.ConnectionError("Failed to connect to the server")
         except requests.HTTPError as e:
-            if 'response' in locals():
-                raise requests.HTTPError(f"HTTP error: {response.status_code} - {response.text}")
+            if response is not None:
+                error_message = self._format_error_message(response)
+                raise requests.HTTPError(error_message)
             else:
                 raise requests.HTTPError(f"HTTP error: {str(e)}")
         except requests.RequestException as e:

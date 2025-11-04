@@ -25,6 +25,12 @@ class AdminDashboard(tk.Frame):
         self.all_users = []
         self.pending_bookings = []
         self.recent_activities = []
+        
+        # Auto-refresh tracking
+        self.auto_refresh_enabled = True
+        self.auto_refresh_interval = 30000  # 30 seconds
+        self.refresh_timer = None
+        self.current_view = 'dashboard'  # Track current view for refresh
 
         # Layout: 1 row, 2 columns (sidebar, main)
         self.grid_rowconfigure(0, weight=1)
@@ -36,6 +42,9 @@ class AdminDashboard(tk.Frame):
 
         # Initial content
         self._load_all_data_then(self._render_dashboard)
+        
+        # Start auto-refresh
+        self._start_auto_refresh()
 
     # Sidebar
     def _build_sidebar(self):
@@ -200,6 +209,76 @@ class AdminDashboard(tk.Frame):
 
         threading.Thread(target=worker, daemon=True).start()
 
+    # Auto-refresh methods
+    def _start_auto_refresh(self):
+        """Start automatic refresh of data every 30 seconds"""
+        if self.auto_refresh_enabled:
+            self._schedule_refresh()
+    
+    def _schedule_refresh(self):
+        """Schedule the next refresh"""
+        if self.refresh_timer:
+            self.after_cancel(self.refresh_timer)
+        self.refresh_timer = self.after(self.auto_refresh_interval, self._auto_refresh)
+    
+    def _auto_refresh(self):
+        """Auto-refresh data in background"""
+        if not self.auto_refresh_enabled:
+            return
+        
+        def worker():
+            try:
+                # Silently refresh pending events
+                self.pending_events = self.api.get('admin/events/pending') or []
+                # Refresh pending bookings
+                self.pending_bookings = self.api.get('admin/bookings/pending') or []
+                
+                # If we're on dashboard, refresh the view
+                if self.current_view == 'dashboard':
+                    self.after(0, self._update_dashboard_counts)
+                elif self.current_view == 'manage_events':
+                    # Refresh all events
+                    self.all_events = self.api.get('events') or []
+                    self.after(0, self._render_manage_events)
+                    
+            except Exception:
+                pass  # Fail silently for background refresh
+            
+            # Schedule next refresh
+            self.after(0, self._schedule_refresh)
+        
+        threading.Thread(target=worker, daemon=True).start()
+    
+    def _manual_refresh(self):
+        """Manual refresh triggered by user"""
+        # Reload all data and re-render current view
+        if self.current_view == 'dashboard':
+            self._load_all_data_then(self._render_dashboard)
+        elif self.current_view == 'manage_events':
+            self._load_all_data_then(self._render_manage_events)
+        elif self.current_view == 'manage_resources':
+            self._load_all_data_then(self._render_manage_resources)
+        elif self.current_view == 'manage_users':
+            self._load_all_data_then(self._render_manage_users)
+        elif self.current_view == 'booking_approvals':
+            self._load_all_data_then(self._render_booking_approvals)
+    
+    def _update_dashboard_counts(self):
+        """Update only the counts on dashboard without full re-render"""
+        # This is a lightweight update - just refresh the badge
+        pass  # We'll implement this if needed
+    
+    def _stop_auto_refresh(self):
+        """Stop auto-refresh (call this when dashboard is destroyed)"""
+        self.auto_refresh_enabled = False
+        if self.refresh_timer:
+            self.after_cancel(self.refresh_timer)
+    
+    def destroy(self):
+        """Override destroy to stop auto-refresh"""
+        self._stop_auto_refresh()
+        super().destroy()
+
     # Views
     def _clear_content(self):
         for w in self.content.winfo_children():
@@ -212,8 +291,18 @@ class AdminDashboard(tk.Frame):
         tk.Label(bar, text=text, bg='#FEF3C7', fg='#92400E').pack(side='left', padx=8, pady=6)
 
     def _render_dashboard(self):
+        self.current_view = 'dashboard'
         self._clear_content()
         colors = self.controller.colors
+        
+        # Add refresh button at top
+        top_bar = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
+        top_bar.pack(fill='x', padx=16, pady=(12, 0))
+        tk.Label(top_bar, text='Admin Dashboard', bg=self.controller.colors.get('background', '#ECF0F1'), 
+                font=('Helvetica', 16, 'bold'), fg=colors.get('primary', '#2C3E50')).pack(side='left')
+        
+        refresh_btn = create_secondary_button(top_bar, '🔄 Refresh', self._manual_refresh, width=100)
+        refresh_btn.pack(side='right')
 
         # System Statistics Cards
         stats = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
@@ -367,10 +456,17 @@ class AdminDashboard(tk.Frame):
             tk.Label(row, text=status, bg='white', fg=color, font=('Helvetica', 10, 'bold')).pack(side='right')
 
     def _render_manage_events(self):
+        self.current_view = 'manage_events'
         self._clear_content()
         colors = self.controller.colors
         
-        tk.Label(self.content, text='Manage Events', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
+        # Header with refresh button
+        header_frame = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
+        header_frame.pack(fill='x', padx=16, pady=(16, 8))
+        tk.Label(header_frame, text='Manage Events', bg=self.controller.colors.get('background', '#ECF0F1'), 
+                font=('Helvetica', 14, 'bold')).pack(side='left')
+        refresh_btn = create_secondary_button(header_frame, '🔄 Refresh', self._manual_refresh, width=100)
+        refresh_btn.pack(side='right')
         
         # Filter tabs
         tab_frame = tk.Frame(self.content, bg=self.controller.colors.get('background', '#ECF0F1'))
@@ -511,6 +607,7 @@ class AdminDashboard(tk.Frame):
         view_btn.pack(side='left', padx=2)
 
     def _render_manage_resources(self):
+        self.current_view = 'manage_resources'
         self._clear_content()
         colors = self.controller.colors
         
@@ -556,6 +653,7 @@ class AdminDashboard(tk.Frame):
                 delete_btn.pack(side='left', padx=2)
 
     def _render_manage_users(self):
+        self.current_view = 'manage_users'
         self._clear_content()
         
         tk.Label(self.content, text='Manage Users', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))
@@ -603,6 +701,7 @@ class AdminDashboard(tk.Frame):
                 view_btn.pack(side='left', padx=2)
 
     def _render_booking_approvals(self):
+        self.current_view = 'booking_approvals'
         self._clear_content()
         
         tk.Label(self.content, text='Booking Approvals', bg=self.controller.colors.get('background', '#ECF0F1'), font=('Helvetica', 14, 'bold')).pack(anchor='w', padx=16, pady=(16, 8))

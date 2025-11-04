@@ -86,6 +86,19 @@ public class EventDao {
         return key != null ? key.intValue() : -1;
     }
 
+    public void update(Event event) {
+        String sql = "UPDATE events SET title = ?, description = ?, start_time = ?, end_time = ?, venue = ?, status = ? WHERE id = ?";
+        jdbc.update(sql, 
+            event.getTitle(), 
+            event.getDescription(), 
+            toTimestamp(event.getStartTime()), 
+            toTimestamp(event.getEndTime()), 
+            event.getVenue(), 
+            event.getStatus(), 
+            event.getId()
+        );
+    }
+
     public void updateStatus(int eventId, String status) {
         String sql = "UPDATE events SET status = ? WHERE id = ?";
         jdbc.update(sql, status, eventId);

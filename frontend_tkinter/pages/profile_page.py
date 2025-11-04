@@ -9,7 +9,7 @@ import re
 
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
-from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_warning_button, create_danger_button
+from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_warning_button, create_danger_button, bind_mousewheel
 
 
 class ProfilePage(tk.Frame):
@@ -127,28 +127,42 @@ class ProfilePage(tk.Frame):
         
         def worker():
             try:
-                # Try to get profile from API
-                self.profile_data = self.api.get('users/profile') or {}
+                # Always start with session data for current logged-in user
+                user = self.session.get_user()
+                if not user:
+                    # No user logged in - shouldn't happen but handle it
+                    self.after(0, lambda: messagebox.showerror('Error', 'No user session found. Please log in again.'))
+                    return
                 
-                # If empty, use session data as fallback
-                if not self.profile_data:
-                    user = self.session.get_user()
-                    if user:
-                        self.profile_data = {
-                            'name': user.get('name', 'User Name'),
-                            'email': user.get('email', 'user@example.com'),
-                            'username': user.get('username', user.get('email', '').split('@')[0]),
-                            'role': user.get('role', 'student'),
-                            'phone': user.get('phone', 'N/A'),
-                            'department': user.get('department', 'N/A'),
-                            'student_id': user.get('student_id', 'N/A'),
-                            'year': user.get('year', 'N/A'),
-                            'status': 'active',
-                            'joined_date': user.get('created_at', '2024-01-01'),
-                            'events_attended': 0,
-                            'bookings_made': 0,
-                            'photo_url': ''
-                        }
+                # Build profile from session data first (this is always correct for current user)
+                base_profile = {
+                    'name': user.get('name', user.get('username', 'User Name')),
+                    'email': user.get('email', 'user@example.com'),
+                    'username': user.get('username', user.get('email', 'user').split('@')[0] if user.get('email') else 'user'),
+                    'user_id': user.get('user_id', 'N/A'),
+                    'role': (user.get('role', 'student') or 'student').lower(),
+                    'phone': user.get('phone', 'N/A'),
+                    'department': user.get('department', 'N/A'),
+                    'student_id': user.get('student_id', 'N/A'),
+                    'year': user.get('year', 'N/A'),
+                    'status': 'active',
+                    'joined_date': user.get('created_at', '2024-01-01'),
+                    'events_attended': 0,
+                    'bookings_made': 0,
+                    'photo_url': ''
+                }
+                
+                # Try to get additional profile data from API (optional)
+                try:
+                    api_profile = self.api.get('users/profile') or {}
+                    # Merge API data with session data (session data takes precedence for identity fields)
+                    if api_profile:
+                        base_profile.update({k: v for k, v in api_profile.items() if k not in ['user_id', 'username', 'email', 'role']})
+                except Exception as api_error:
+                    # API call failed - that's okay, we have session data
+                    print(f"Could not fetch additional profile data from API: {api_error}")
+                
+                self.profile_data = base_profile
                 
                 # Set notification preferences from profile
                 prefs = self.profile_data.get('notification_preferences', {})
@@ -166,15 +180,16 @@ class ProfilePage(tk.Frame):
                 
                 self.after(0, self._render_content)
             except Exception as error:
-                # Use session data as fallback
+                # Fallback error handler
                 def show_with_fallback():
                     user = self.session.get_user()
                     if user:
                         self.profile_data = {
-                            'name': user.get('name', 'User Name'),
+                            'name': user.get('name', user.get('username', 'User Name')),
                             'email': user.get('email', 'user@example.com'),
-                            'username': user.get('username', user.get('email', '').split('@')[0]),
-                            'role': user.get('role', 'student'),
+                            'username': user.get('username', user.get('email', 'user').split('@')[0] if user.get('email') else 'user'),
+                            'user_id': user.get('user_id', 'N/A'),
+                            'role': (user.get('role', 'student') or 'student').lower(),
                             'phone': user.get('phone', 'N/A'),
                             'department': user.get('department', 'N/A'),
                             'student_id': user.get('student_id', 'N/A'),
@@ -190,6 +205,7 @@ class ProfilePage(tk.Frame):
                             'name': 'User Name',
                             'email': 'user@example.com',
                             'username': 'user',
+                            'user_id': 'N/A',
                             'role': 'student',
                             'phone': 'N/A',
                             'department': 'N/A',
@@ -278,6 +294,9 @@ class ProfilePage(tk.Frame):
         def on_canvas_configure(event):
             canvas.itemconfig(canvas.find_withtag('all')[0], width=event.width)
         canvas.bind('<Configure>', on_canvas_configure)
+        
+        # Enable mousewheel/trackpad scrolling
+        bind_mousewheel(canvas, content)
         
         # Profile header card
         header_card = tk.Frame(content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
@@ -412,6 +431,9 @@ class ProfilePage(tk.Frame):
         def on_canvas_configure(event):
             canvas.itemconfig(canvas.find_withtag('all')[0], width=event.width)
         canvas.bind('<Configure>', on_canvas_configure)
+        
+        # Enable mousewheel/trackpad scrolling
+        bind_mousewheel(canvas, content)
         
         # Change password card
         password_card = tk.Frame(content, bg='white', highlightthickness=1, highlightbackground='#E5E7EB')
@@ -817,6 +839,9 @@ class ProfilePage(tk.Frame):
         
         canvas.create_window((0, 0), window=content, anchor='nw')
         content.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
+        
+        # Enable mousewheel/trackpad scrolling
+        bind_mousewheel(canvas, content)
         
         form_frame = tk.Frame(content, bg='white')
         form_frame.pack(fill='both', expand=True, padx=30, pady=20)

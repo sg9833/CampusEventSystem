@@ -36,7 +36,7 @@ public class EventController {
     public ResponseEntity<List<Event>> listEvents(@AuthenticationPrincipal User user) {
         // Students should only see approved events
         // Organizers and Admins can see all events
-        if (user != null && "STUDENT".equals(user.getRole())) {
+        if (user != null && "STUDENT".equalsIgnoreCase(user.getRole())) {
             return ResponseEntity.ok(eventDao.findApproved());
         }
         return ResponseEntity.ok(eventDao.findAll());
@@ -188,7 +188,7 @@ public class EventController {
             }
 
             // Only organizer of the event or admin can view registrations
-            if (!event.getOrganizerId().equals(user.getId()) && !"ADMIN".equals(user.getRole())) {
+            if (!event.getOrganizerId().equals(user.getId()) && !"ADMIN".equalsIgnoreCase(user.getRole())) {
                 return ResponseEntity.status(403).body(Map.of("error", "You do not have permission to view these registrations"));
             }
 
@@ -202,6 +202,60 @@ public class EventController {
         } catch (Exception ex) {
             logger.error("Error fetching event registrations: ", ex);
             return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch registrations", "message", ex.getMessage()));
+        }
+    }
+
+    // Update an existing event
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateEvent(@PathVariable int id, 
+                                         @Valid @RequestBody CreateEventRequest request,
+                                         @AuthenticationPrincipal User user) {
+        try {
+            logger.info("PUT request for event ID: {} by user ID: {}", id, user != null ? user.getId() : "null");
+            
+            if (user == null) {
+                logger.error("User is null - authentication failed");
+                return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+            }
+            
+            // Fetch the event to check ownership
+            Event existingEvent = eventDao.findById(id);
+            if (existingEvent == null) {
+                logger.warn("Event not found: {}", id);
+                return ResponseEntity.status(404).body(Map.of("error", "Event not found"));
+            }
+            
+            // Check if user is the owner (only organizers can edit their own events)
+            if (!existingEvent.getOrganizerId().equals(user.getId())) {
+                logger.warn("Permission denied - User ID {} trying to edit event with OrganizerId {}", 
+                           user.getId(), existingEvent.getOrganizerId());
+                return ResponseEntity.status(403).body(Map.of("error", "You do not have permission to edit this event"));
+            }
+            
+            // Create updated event - ALWAYS set status to pending for re-approval
+            Event updatedEvent = new Event(
+                id,
+                request.getTitle(),
+                request.getDescription(),
+                request.getOrganizerId(),
+                request.getStartTime(),
+                request.getEndTime(),
+                request.getVenue(),
+                "pending", // Edited events always go back to pending
+                existingEvent.getCreatedAt()
+            );
+            
+            logger.info("Updating event {} to pending status for re-approval", id);
+            eventDao.update(updatedEvent);
+            
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("id", id);
+            resp.put("message", "Event updated successfully and sent for admin re-approval");
+            resp.put("status", "pending");
+            return ResponseEntity.ok(resp);
+        } catch (Exception ex) {
+            logger.error("Error updating event: ", ex);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to update event", "message", ex.getMessage()));
         }
     }
 
@@ -230,7 +284,7 @@ public class EventController {
                        event.getId(), event.getTitle(), event.getOrganizerId());
             
             // Check if user is the owner (or admin can delete any event)
-            if (!event.getOrganizerId().equals(user.getId()) && !"ADMIN".equals(user.getRole())) {
+            if (!event.getOrganizerId().equals(user.getId()) && !"ADMIN".equalsIgnoreCase(user.getRole())) {
                 logger.warn("Permission denied - User ID {} trying to delete event with OrganizerId {}", 
                            user.getId(), event.getOrganizerId());
                 return ResponseEntity.status(403).body(Map.of("error", "You do not have permission to delete this event"));

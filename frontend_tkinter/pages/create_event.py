@@ -585,7 +585,12 @@ class CreateEventPage(tk.Frame):
             self._reset_form()
             
         except Exception as e:
-            messagebox.showerror('Error', f'Failed to submit event: {str(e)}')
+            # Format error message nicely for users
+            error_msg = str(e)
+            # Remove "HTTP error: " prefix if present to make it cleaner
+            if error_msg.startswith('HTTP error: '):
+                error_msg = error_msg.replace('HTTP error: ', '', 1)
+            messagebox.showerror('Failed to Create Event', error_msg)
 
     def _build_payload(self):
         """Build API payload from form data"""
