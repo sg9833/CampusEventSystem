@@ -6,7 +6,20 @@ A comprehensive campus event and resource management system with role-based acce
 
 **Creator & Lead Developer:** Garine Sai Ajay
 
-## 🚀 Quick Start
+## ⚠️ FIRST TIME SETUP?
+
+**→ READ [CLEANUP_BEFORE_SETUP.md](CLEANUP_BEFORE_SETUP.md) FIRST!**
+
+Before running the application, you MUST:
+1. Delete unnecessary developer files (test scripts, logs, etc.)
+2. **Edit `application.properties` to replace the developer's MySQL password**
+3. Then follow [CLIENT_SETUP_GUIDE.md](CLIENT_SETUP_GUIDE.md)
+
+**DO NOT skip this step or the application will NOT work!**
+
+---
+
+## 🚀 Quick Start (After Cleanup & Setup)
 
 ### One-Command Startup
 
