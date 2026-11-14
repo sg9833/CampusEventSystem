@@ -111,7 +111,9 @@ start_frontend() {
     cd "$FRONTEND_DIR"
     
     # Check if Python 3.11 is available
-    if command -v python3.11 &> /dev/null; then
+    if [ -x "$FRONTEND_DIR/venv/bin/python" ]; then
+        PYTHON_CMD="$FRONTEND_DIR/venv/bin/python"
+    elif command -v python3.11 &> /dev/null; then
         PYTHON_CMD="python3.11"
     elif command -v python3 &> /dev/null; then
         PYTHON_CMD="python3"

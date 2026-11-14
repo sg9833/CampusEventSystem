@@ -237,7 +237,21 @@ class CampusEventApp(tk.Tk):
     def __init__(self):
         """Initialize application."""
         super().__init__()
-        
+
+        # Default widget colors: on macOS dark mode, Tk labels/entries without an
+        # explicit fg render white (invisible on our white cards) and entries go black.
+        self.option_add('*Label.foreground', '#1F2937')
+        self.option_add('*Entry.background', 'white')
+        self.option_add('*Entry.foreground', '#1F2937')
+        self.option_add('*Entry.insertBackground', '#1F2937')
+        self.option_add('*Entry.highlightThickness', 1)
+        self.option_add('*Entry.highlightBackground', '#D1D5DB')
+        self.option_add('*Entry.highlightColor', '#3498DB')
+        self.option_add('*Text.background', 'white')
+        self.option_add('*Text.foreground', '#1F2937')
+        self.option_add('*Listbox.background', 'white')
+        self.option_add('*Listbox.foreground', '#1F2937')
+
         # Initialize global state (renamed to avoid conflict with tk.Tk.state())
         self.app_state = GlobalState()
         

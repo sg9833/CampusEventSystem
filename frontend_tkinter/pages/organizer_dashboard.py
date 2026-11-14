@@ -5,6 +5,7 @@ from datetime import datetime
 
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
+from utils.format import fmt_dt, plural
 from utils.button_styles import ButtonStyles
 from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_danger_button, create_warning_button
 
@@ -153,7 +154,8 @@ class OrganizerDashboard(tk.Frame):
         canvas.pack(side='left', fill='both', expand=True)
 
         self.content = tk.Frame(canvas, bg=self.controller.colors.get('background', '#ECF0F1'))
-        canvas.create_window((0, 0), window=self.content, anchor='nw')
+        _win = canvas.create_window((0, 0), window=self.content, anchor='nw')
+        canvas.bind('<Configure>', lambda e, c=canvas, w=_win: c.itemconfigure(w, width=e.width))
         self.content.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
 
         # Spinner
@@ -389,19 +391,22 @@ class OrganizerDashboard(tk.Frame):
             tk.Label(calendar_frame, text='No scheduled events', bg='white', fg='#6B7280').pack(padx=12, pady=12)
         else:
             # Header
+            _COLS = [230, 190, 160, 110, 140]
             header = tk.Frame(calendar_frame, bg='#F9FAFB')
             header.pack(fill='x')
             for i, h in enumerate(['Event', 'Date & Time', 'Venue', 'Status', 'Registrations']):
                 tk.Label(header, text=h, bg='#F9FAFB', fg='#374151', font=('Helvetica', 10, 'bold')).grid(row=0, column=i, sticky='w', padx=8, pady=8)
-                header.grid_columnconfigure(i, weight=1 if i == 0 else 0)
+                header.grid_columnconfigure(i, weight=0, minsize=_COLS[i])
 
             # Event rows
             for ev in events_sorted:
                 row = tk.Frame(calendar_frame, bg='white')
                 row.pack(fill='x', padx=4, pady=2)
+                for _i, _w in enumerate(_COLS):
+                    row.grid_columnconfigure(_i, weight=0, minsize=_w)
                 
                 title = ev.get('title') or 'Untitled Event'
-                start_time = ev.get('start_time') or 'N/A'
+                start_time = fmt_dt(ev.get('start_time'), 'N/A')
                 venue = ev.get('venue') or 'N/A'
                 status = (ev.get('status') or 'pending').title()
                 event_id = ev.get('id')
@@ -427,7 +432,7 @@ class OrganizerDashboard(tk.Frame):
                 tk.Label(row, text=start_time, bg='white', fg='#6B7280').grid(row=0, column=1, sticky='w', padx=8)
                 tk.Label(row, text=venue, bg='white', fg='#6B7280').grid(row=0, column=2, sticky='w', padx=8)
                 tk.Label(row, text=status, bg='white', fg=status_color, font=('Helvetica', 10, 'bold')).grid(row=0, column=3, sticky='w', padx=8)
-                tk.Label(row, text=f'{reg_count} attendees', bg='white', fg='#6B7280').grid(row=0, column=4, sticky='w', padx=8)
+                tk.Label(row, text=plural(reg_count, 'attendee'), bg='white', fg='#6B7280').grid(row=0, column=4, sticky='w', padx=8)
 
     def _render_create_event(self):
         self.current_view = 'create_event'
@@ -588,6 +593,13 @@ class OrganizerDashboard(tk.Frame):
         # Show registrations grouped by event
         for event in self.my_events:
             event_id = event.get('id')
+            # Always fetch fresh data: students may have registered since the dashboard loaded
+            try:
+                fresh = self.api.get(f'events/{event_id}/registrations')
+                if fresh is not None:
+                    self.event_registrations[event_id] = fresh
+            except Exception:
+                pass
             registrations_data = self.event_registrations.get(event_id, [])
             
             # Handle both dict and list response formats
@@ -610,7 +622,7 @@ class OrganizerDashboard(tk.Frame):
             header.pack(fill='x')
             tk.Label(header, text=event.get('title', 'Untitled'), bg='#F9FAFB', fg='#1F2937', 
                     font=('Helvetica', 12, 'bold')).pack(side='left', padx=12, pady=8)
-            tk.Label(header, text=f'{reg_count} registrations', bg='#F9FAFB', fg='#1F2937').pack(side='right', padx=12, pady=8)
+            tk.Label(header, text=plural(reg_count, 'registration'), bg='#F9FAFB', fg='#1F2937').pack(side='right', padx=12, pady=8)
             
             # Registrations list
             if not registrations:
@@ -620,9 +632,11 @@ class OrganizerDashboard(tk.Frame):
                     reg_row = tk.Frame(event_frame, bg='white')
                     reg_row.pack(fill='x', padx=12, pady=4)
                     
-                    user_info = reg.get('user', {})
-                    user_name = user_info.get('username') or user_info.get('email') or f"User {reg.get('user_id', 'N/A')}"
-                    reg_date = reg.get('registered_at') or 'N/A'
+                    user_info = reg.get('user') or {}
+                    user_name = user_info.get('name') or user_info.get('username') or user_info.get('email') or f"User {reg.get('user_id', 'N/A')}"
+                    if user_info.get('email'):
+                        user_name = f"{user_name} ({user_info['email']})"
+                    reg_date = fmt_dt(reg.get('registered_at'), 'N/A')
                     
                     tk.Label(reg_row, text='👤', bg='white', fg='#1F2937').pack(side='left', padx=(0, 8))
                     tk.Label(reg_row, text=user_name, bg='white', fg='#1F2937', 
