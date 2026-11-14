@@ -26,8 +26,10 @@ public class EventController {
     private static final Logger logger = LoggerFactory.getLogger(EventController.class);
     private final EventDao eventDao;
     private final EventRegistrationDao registrationDao;
+    private final com.campuscoord.dao.UserDao userDao;
 
-    public EventController(EventDao eventDao, EventRegistrationDao registrationDao) {
+    public EventController(EventDao eventDao, EventRegistrationDao registrationDao, com.campuscoord.dao.UserDao userDao) {
+        this.userDao = userDao;
         this.eventDao = eventDao;
         this.registrationDao = registrationDao;
     }
@@ -197,7 +199,27 @@ public class EventController {
 
             Map<String, Object> resp = new HashMap<>();
             resp.put("count", count);
-            resp.put("registrations", registrations);
+            List<Map<String, Object>> enriched = new java.util.ArrayList<>();
+            for (EventRegistration r : registrations) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", r.getId());
+                item.put("eventId", r.getEventId());
+                item.put("userId", r.getUserId());
+                item.put("registeredAt", r.getRegisteredAt());
+                item.put("status", r.getStatus());
+                try {
+                    User u = userDao.findById(r.getUserId());
+                    if (u != null) {
+                        Map<String, Object> ui = new HashMap<>();
+                        ui.put("name", u.getName());
+                        ui.put("username", u.getUsername());
+                        ui.put("email", u.getEmail());
+                        item.put("user", ui);
+                    }
+                } catch (Exception ignored) { }
+                enriched.add(item);
+            }
+            resp.put("registrations", enriched);
             return ResponseEntity.ok(resp);
         } catch (Exception ex) {
             logger.error("Error fetching event registrations: ", ex);

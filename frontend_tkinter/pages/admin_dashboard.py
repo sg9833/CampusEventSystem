@@ -5,6 +5,7 @@ from datetime import datetime
 
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
+from utils.format import fmt_dt
 from utils.button_styles import ButtonStyles
 from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_danger_button, create_warning_button
 
@@ -103,7 +104,7 @@ class AdminDashboard(tk.Frame):
         add_btn('Manage Events', self._render_manage_events, icon='📅')
         add_btn('Manage Resources', self._render_manage_resources, icon='🏢')
         add_btn('Manage Users', self._render_manage_users, icon='👥')
-        add_btn('Booking Approvals', self._render_booking_approvals, icon='✓')
+        add_btn('Booking Approvals', self._render_booking_approvals, icon='✅')
         add_btn('Reports & Analytics', self._render_reports_analytics, icon='📊')
         add_btn('System Settings', self._render_system_settings, icon='⚙️')
         add_btn('Logout', self._logout, icon='🚪')
@@ -147,7 +148,8 @@ class AdminDashboard(tk.Frame):
         canvas.pack(side='left', fill='both', expand=True)
 
         self.content = tk.Frame(canvas, bg=self.controller.colors.get('background', '#ECF0F1'))
-        canvas.create_window((0, 0), window=self.content, anchor='nw')
+        _win = canvas.create_window((0, 0), window=self.content, anchor='nw')
+        canvas.bind('<Configure>', lambda e, c=canvas, w=_win: c.itemconfigure(w, width=e.width))
         self.content.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
 
         # Spinner
@@ -360,7 +362,7 @@ class AdminDashboard(tk.Frame):
                 
                 tk.Label(row, text='📅', bg='white').pack(side='left', padx=(0, 8))
                 tk.Label(row, text=event.get('title', 'Untitled Event'), bg='white', font=('Helvetica', 10, 'bold')).pack(side='left')
-                tk.Label(row, text=event.get('start_time', 'N/A'), bg='white', fg='#6B7280').pack(side='left', padx=(12, 0))
+                tk.Label(row, text=fmt_dt(event.get('start_time'), 'N/A'), bg='white', fg='#6B7280').pack(side='left', padx=(12, 0))
                 
                 btn_frame = tk.Frame(row, bg='white')
                 btn_frame.pack(side='right')
@@ -403,7 +405,7 @@ class AdminDashboard(tk.Frame):
         activities = []
         for event in self.all_events[:10]:
             activities.append({
-                'time': event.get('created_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                'time': fmt_dt(event.get('created_at'), datetime.now().strftime('%d %b %Y, %H:%M')),
                 'action': f"Event '{event.get('title', 'Untitled')}' {event.get('status', 'created')}",
                 'icon': '📅',
                 'user': f"User #{event.get('organizer_id', 'N/A')}"
@@ -411,7 +413,7 @@ class AdminDashboard(tk.Frame):
         
         for user in self.all_users[:5]:
             activities.append({
-                'time': user.get('created_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                'time': fmt_dt(user.get('created_at'), datetime.now().strftime('%d %b %Y, %H:%M')),
                 'action': f"User '{user.get('username', 'Unknown')}' registered",
                 'icon': '👤',
                 'user': user.get('username', 'Unknown')
@@ -444,7 +446,7 @@ class AdminDashboard(tk.Frame):
         health_indicators = [
             ('Database Connection', 'Healthy', '#27AE60', '●'),
             ('API Services', 'Operational', '#27AE60', '●'),
-            ('User Sessions', f'{len(self.all_users)} active', '#3498DB', '●'),
+            ('Registered Users', f'{len(self.all_users)} total', '#3498DB', '●'),
             ('Server Load', 'Normal', '#27AE60', '●')
         ]
 
@@ -543,7 +545,7 @@ class AdminDashboard(tk.Frame):
             values = (
                 event.get('title', 'Untitled'),
                 f"User #{event.get('organizer_id', 'N/A')}",
-                event.get('start_time', 'N/A'),
+                fmt_dt(event.get('start_time'), 'N/A'),
                 event.get('venue', 'N/A'),
                 status.title()
             )

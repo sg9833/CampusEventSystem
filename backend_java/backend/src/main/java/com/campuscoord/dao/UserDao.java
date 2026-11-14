@@ -22,6 +22,10 @@ public class UserDao {
         this.jdbc = jdbc;
     }
 
+    public java.util.List<java.util.Map<String, Object>> findAllPublic() {
+        return jdbc.queryForList("SELECT id, name, email, username, role, created_at FROM users ORDER BY id");
+    }
+
     public Optional<User> findByEmail(String email) {
         String sql = "SELECT id, name, email, username, password_hash, role, created_at FROM users WHERE email = ?";
         try {

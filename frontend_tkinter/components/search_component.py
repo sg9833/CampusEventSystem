@@ -72,7 +72,7 @@ class SearchComponent(tk.Frame):
         self._build_ui()
         
         # Bind search
-        self.search_text.trace('w', self._on_search_change)
+        self.search_text.trace_add('write', self._on_search_change)
 
     def _build_ui(self):
         """Build the search component UI"""

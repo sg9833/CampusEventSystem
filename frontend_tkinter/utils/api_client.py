@@ -1,3 +1,4 @@
+import re
 import requests
 import json
 from typing import Optional, Dict, Any, Callable
@@ -11,6 +12,27 @@ API_BASE_URL = config_module.API_BASE_URL
 
 import threading
 
+
+
+def _snake(name: str) -> str:
+    return re.sub(r'(?<=[a-z0-9])([A-Z])', lambda m: '_' + m.group(1).lower(), name)
+
+
+def _add_snake_keys(data):
+    """Backend returns camelCase JSON; pages read snake_case. Add snake_case aliases."""
+    if isinstance(data, list):
+        return [_add_snake_keys(i) for i in data]
+    if isinstance(data, dict):
+        out = {}
+        for k, v in data.items():
+            v = _add_snake_keys(v)
+            out[k] = v
+            if isinstance(k, str):
+                sk = _snake(k)
+                if sk != k and sk not in data:
+                    out[sk] = v
+        return out
+    return data
 
 class RateLimitError(Exception):
     """Raised when rate limit is exceeded"""
@@ -132,7 +154,7 @@ class APIClient:
                 self._handle_auth_error(response.status_code)
             
             response.raise_for_status()
-            return response.json()
+            return _add_snake_keys(response.json())
         except requests.Timeout:
             raise requests.Timeout(f"Request timed out after {self.timeout} seconds")
         except requests.ConnectionError:
@@ -165,7 +187,7 @@ class APIClient:
                 self._handle_auth_error(response.status_code)
             
             response.raise_for_status()
-            return response.json()
+            return _add_snake_keys(response.json())
         except requests.Timeout:
             raise requests.Timeout(f"Request timed out after {self.timeout} seconds")
         except requests.ConnectionError:
@@ -198,7 +220,7 @@ class APIClient:
                 self._handle_auth_error(response.status_code)
             
             response.raise_for_status()
-            return response.json()
+            return _add_snake_keys(response.json())
         except requests.Timeout:
             raise requests.Timeout(f"Request timed out after {self.timeout} seconds")
         except requests.ConnectionError:
@@ -232,7 +254,7 @@ class APIClient:
             response.raise_for_status()
             # DELETE might not return JSON, so handle gracefully
             try:
-                return response.json()
+                return _add_snake_keys(response.json())
             except json.JSONDecodeError:
                 return {"message": "Deleted successfully"}
         except requests.Timeout:

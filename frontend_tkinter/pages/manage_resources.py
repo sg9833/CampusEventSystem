@@ -34,7 +34,7 @@ class ManageResourcesPage(tk.Frame):
         self.filter_status = tk.StringVar(value='all')
         
         # Bind search
-        self.search_var.trace('w', lambda *args: self._apply_filters())
+        self.search_var.trace_add('write', lambda *args: self._apply_filters())
         
         # Layout
         self.grid_rowconfigure(0, weight=1)

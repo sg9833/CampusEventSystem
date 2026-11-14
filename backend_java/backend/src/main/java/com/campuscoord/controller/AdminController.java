@@ -23,10 +23,21 @@ public class AdminController {
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
     private final EventDao eventDao;
     private final BookingDao bookingDao;
+    private final com.campuscoord.dao.UserDao userDao;
 
-    public AdminController(EventDao eventDao, BookingDao bookingDao) {
+    public AdminController(EventDao eventDao, BookingDao bookingDao, com.campuscoord.dao.UserDao userDao) {
         this.eventDao = eventDao;
         this.bookingDao = bookingDao;
+        this.userDao = userDao;
+    }
+
+    // List all users (no password hashes)
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsers(@AuthenticationPrincipal User user) {
+        if (user == null || !"ADMIN".equalsIgnoreCase(user.getRole())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
+        }
+        return ResponseEntity.ok(userDao.findAllPublic());
     }
 
     // Get all pending events for approval

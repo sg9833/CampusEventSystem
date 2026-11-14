@@ -5,6 +5,7 @@ from datetime import datetime
 
 from utils.api_client import APIClient
 from utils.session_manager import SessionManager
+from utils.format import fmt_dt
 from utils.button_styles import ButtonStyles
 from utils.canvas_button import create_primary_button, create_secondary_button, create_success_button, create_danger_button, bind_mousewheel
 
@@ -145,7 +146,8 @@ class StudentDashboard(tk.Frame):
         canvas.pack(side='left', fill='both', expand=True)
 
         self.content = tk.Frame(canvas, bg=self.controller.colors.get('background', '#ECF0F1'))
-        canvas.create_window((0, 0), window=self.content, anchor='nw')
+        _win = canvas.create_window((0, 0), window=self.content, anchor='nw')
+        canvas.bind('<Configure>', lambda e, c=canvas, w=_win: c.itemconfigure(w, width=e.width))
         self.content.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox('all')))
         
         # Enable mousewheel/trackpad scrolling
@@ -307,7 +309,7 @@ class StudentDashboard(tk.Frame):
             row = tk.Frame(list_frame, bg='white')
             row.pack(fill='x', padx=8, pady=4)
             title = ev.get('title') or 'Untitled Event'
-            when = ev.get('start_time') or ''
+            when = fmt_dt(ev.get('start_time'), '')
             tk.Label(row, text=f"📅 {title}", bg='white', font=('Helvetica', 12, 'bold')).pack(side='left', padx=(4, 8))
             tk.Label(row, text=when, bg='white', fg='#6B7280').pack(side='left')
             reg_btn = create_success_button(row, 'Register', lambda e=ev: self._register_event(e), width=90, height=30)
@@ -418,7 +420,7 @@ class StudentDashboard(tk.Frame):
                 tk.Label(row, text=e.get('title') or 'Untitled', bg='white', font=('Helvetica', 10)).grid(row=0, column=0, sticky='w', padx=8, pady=8)
                 
                 # Start Time column
-                tk.Label(row, text=e.get('start_time') or 'TBD', bg='white', fg='#6B7280', font=('Helvetica', 10)).grid(row=0, column=1, sticky='w', padx=8, pady=8)
+                tk.Label(row, text=fmt_dt(e.get('start_time')), bg='white', fg='#6B7280', font=('Helvetica', 10)).grid(row=0, column=1, sticky='w', padx=8, pady=8)
                 
                 # Venue column
                 tk.Label(row, text=e.get('venue') or 'TBD', bg='white', fg='#6B7280', font=('Helvetica', 10)).grid(row=0, column=2, sticky='w', padx=8, pady=8)
